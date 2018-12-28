@@ -5,7 +5,7 @@
 # [ AUTH ] Benjamin Skinner; @btskinner (GitHub; Twitter); btskinner.me
 # [ CITE ]
 #
-#  Skinner, B. (2019). Making the connection: broadband access and online
+#  Skinner, B. (). Making the connection: broadband access and online
 #    course enrollment at public open admissions institutions. Research in
 #    Higher Education.       
 #
