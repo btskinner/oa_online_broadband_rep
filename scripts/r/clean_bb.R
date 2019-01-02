@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## <PROJ> Dissertation RQ1
-## <FILE> clean_bb.R
-## <AUTH> Benjamin Skinner
-## <INIT> 30 August 2016
+## [ PROJ ] Open access broadband
+## [ FILE ] clean_bb.R
+## [ AUTH ] Benjamin Skinner: @btskinner
+## [ INIT ] 30 August 2016
 ##
 ################################################################################
 

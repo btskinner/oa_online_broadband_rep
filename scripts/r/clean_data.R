@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## <PROJ> Dissertation
-## <FILE> clean_data.R
-## <AUTH> Benjamin Skinner
-## <INIT> 11 October 2016
+## [ PROJ ] Open access broadband
+## [ FILE ] clean_data.R
+## [ AUTH ] Benjamin Skinner
+## [ INIT ] 11 October 2016
 ##
 ################################################################################
 

@@ -1,20 +1,33 @@
-## Figures for RQ 1 paper
+################################################################################
+##
+## [ PROJ ] Open access broadband
+## [ FILE ] paper_figures.R
+## [ AUTH ] Benjamin Skinner: @btskinner
+## [ INIT ] 28 August 2016
+##
+################################################################################
 
 ## libraries
 libs <- c('tidyverse','rstan','broom','RSQLite','maps','mapproj','maptools',
-          'scales','RColorBrewer', 'grid','gridExtra')
+          'scales','RColorBrewer','grid','gridExtra')
 sapply(libs, require, character.only = TRUE)
 
-## directories
-bdir <- '../../data/broadband/'
-ddir <- '../../data/cleaned/'
-fdir <- '../../figures/'
-gdir <- '../../data/geo/'
-odir <- '../../output/'
+## command line arguments
+args <- commandArgs(trailingOnly = TRUE)
 
-## functions
-`%+%` <- function(a,b) paste(a, b, sep = '')
-`%_%` <- function(a,b) paste(a, b, sep = '_')
+## read in utility functions
+source(paste0(args[1],'/utils.R'))
+
+## directories
+ddir <- args[2]
+fdir <- args[3]
+odir <- args[4]
+adir <- file.path(ddir, 'acs')
+bdir <- file.path(ddir, 'broadband')
+cdir <- file.path(ddir, 'cleaned')
+idir <- file.path(ddir, 'ipeds')
+gdir <- file.path(ddir, 'geo')
+sdir <- file.path(ddir, 'sheeo')
 
 ## colorpalette
 vublack <- rgb(0/255,0/255,0/255,1)
@@ -28,7 +41,7 @@ vugray <- rgb(109/255,110/255,113/255,1)
 ## Broadband histogram
 ## =============================================================================
 
-df_oap <- read_csv(file.path(ddir, 'analysis_oap.csv')) %>%
+df_oap <- read_csv(file.path(cdir, 'analysis_oap.csv')) %>%
     filter(unitid != 150987)
 
 threshold_dl <- data.frame(x = c(5, 8), name = c('Old threshold',
@@ -80,10 +93,10 @@ ggsave(filename = 'sample_ul_hist.pdf',
 ## =============================================================================
 
 ## get database connection
-bb_con <- dbConnect(SQLite(), bdir %+% 'bb.db')
+bb_con <- dbConnect(SQLite(), file.path(bdir, 'bb.db'))
 
 ## get census block group populations
-bgpop <- read_csv(gdir %+% 'CenPop2010_Mean_BG.txt') %>%
+bgpop <- read_csv(file.path(gdir, 'CenPop2010_Mean_BG.txt')) %>%
     setNames(tolower(names(.))) %>%
     mutate(fips = statefp %+% countyfp %+% tractce %+% blkgrpce) %>%
     select(fips, pop = population)
@@ -220,7 +233,7 @@ for (tab in bb_tables) {
 ## =============================================================================
 
 ## Davidson County, TN and surrounding counties
-surcounty <- read_csv(gdir %+% 'neighborcounties.csv') %>%
+surcounty <- read_csv(file.path(gdir, 'neighborcounties.csv')) %>%
     filter(orgfips == 47037) %>%
     select(-instate) %>%
     mutate(orgfips = as.integer(orgfips),
@@ -231,7 +244,7 @@ surcounty <- read_csv(gdir %+% 'neighborcounties.csv') %>%
               by = c('adjfips' = 'fips'))
 
 ## surrounding county centers
-surcounty <- read_csv(gdir %+% 'county_centers.csv') %>%
+surcounty <- read_csv(file.path(gdir, 'county_centers.csv')) %>%
     mutate(fips = as.integer(fips)) %>%
     filter(fips %in% surcounty$adjfips) %>%
     select(fips, clon = pclon10, clat = pclat10) %>%
@@ -250,7 +263,7 @@ cmap <- map_data('county') %>%
     left_join(surcounty %>% select(fips, clon, clat), by = 'fips')
 
 ## nashville state community college
-nscc <- read_csv(ddir %+% 'analysis_oap.csv') %>%
+nscc <- read_csv(file.path(cdir, 'analysis_oap.csv')) %>%
     filter(unitid == 221184, year == 2012) %>%
     select(lon, lat)
 
@@ -298,83 +311,50 @@ ggsave('broadband_weights.pdf',
 ## Marginal effect
 ## =============================================================================
 
-files <- grep('sl_normal_full_pdw2_all_*', list.files('../../output/'), value = T)
-df <- read_stan_csv(file.path('../../output', files))
+## get files: single level, normal all
+files <- grep('sl_normal_full_pdw2_all_*', list.files(odir), value = T)
+df <- read_stan_csv(file.path(odir, files))
 params <- extract(df)
 sl_beta <- params$beta
 
-files <- grep('sl_normal_full_pdw2_download_*', list.files('../../output/'), value = T)
-df <- read_stan_csv(file.path('../../output', files))
+## get files: single level, normal download
+files <- grep('sl_normal_full_pdw2_download_*', list.files(odir), value = T)
+df <- read_stan_csv(file.path(odir, files))
 params <- extract(df)
 sl_beta_dl <- params$beta
 
-files <- grep('sl_normal_full_pdw2_upload_*', list.files('../../output/'), value = T)
-df <- read_stan_csv(file.path('../../output', files))
+## get files: single level, normal upload
+files <- grep('sl_normal_full_pdw2_upload_*', list.files(odir), value = T)
+df <- read_stan_csv(file.path(odir, files))
 params <- extract(df)
 sl_beta_ul <- params$beta
 
-files <- grep('sl_normal_full_pdw2_pcount_*', list.files('../../output/'), value = T)
-df <- read_stan_csv(file.path('../../output', files))
+## get files: single level, normal provider count
+files <- grep('sl_normal_full_pdw2_pcount_*', list.files(odir), value = T)
+df <- read_stan_csv(file.path(odir, files))
 params <- extract(df)
 sl_beta_pc <- params$beta
 
-files <- grep('vi_normal_full_pdw2_all_*', list.files('../../output/'), value = T)
-df <- read_stan_csv(file.path('../../output', files))
+## get files: varying intercept, normal all
+files <- grep('vi_normal_full_pdw2_all_*', list.files(odir), value = T)
+df <- read_stan_csv(file.path(odir, files))
 params <- extract(df)
 vi_beta <- params$beta
 
-get_margin_quad <- function(sample_mat, x_range, ci = 95) {
-    lo <- (1 - (ci / 100)) / 2
-    hi <- 1 - lo
-    out <- purrr::map(x_range,
-                      ~ sample_mat[,1] + (2*sample_mat[,2]*.x)) %>%
-        setNames(as.character(x_range)) %>%
-        as_tibble() %>%
-        gather(x, range) %>%
-        group_by(x) %>%
-        summarize(lo_ci = quantile(range, lo),
-                  med = quantile(range, .5),
-                  mean = mean(range),
-                  hi_ci = quantile(range, hi),
-                  gt0 = mean(range > 0)) %>%
-        ungroup() %>%
-        mutate(x = as.numeric(x),
-               x = x + 1) %>%
-        arrange(x)
-    return(out)
-}
-
-get_margin_mult <- function(df, dl_mat, ul_mat, x_range, y_range, ci = 95) {
-    lo <- (1 - (ci / 100)) / 2
-    hi <- 1 - lo
-    out <- purrr::map2(x_range, y_range,
-                       ~ dl_mat[,1] + (2*dl_mat[,2]*.x)
-                       + ul_mat[,1] + (2*ul_mat[,2]*.y)) %>%
-        bind_cols() %>%
-        setNames(as.character(x_range)) %>%
-        gather(x, range) %>%
-        group_by(x) %>%
-        summarize(lo_ci = quantile(range, lo),
-                  med = quantile(range, .5),
-                  mean = mean(range),
-                  hi_ci = quantile(range, hi),
-                  gt0 = mean(range > 0)) %>%
-        ungroup() %>%
-        mutate(x = as.numeric(x),
-               x = x + 1) %>%
-        arrange(x)
-    return(out)
-}
+## set x range
 x_range <- seq(0,10,.1)
 
+## compute margins
 sl_dl_ <- get_margin_quad(sl_beta_dl[,1:2], x_range) %>% mutate(type = 'dl')
 sl_ul_ <- get_margin_quad(sl_beta_ul[,1:2], x_range) %>% mutate(type = 'ul')
 sl_pc_ <- get_margin_quad(sl_beta_pc[,1:2], x_range) %>% mutate(type = 'pc')
 
-write_csv(sl_dl_, path = file.path(ddir, 'sl_dl_solo_margin_table.csv'))
-write_csv(sl_ul_, path = file.path(ddir, 'sl_ul_solo_margin_table.csv'))
-write_csv(sl_pc_, path = file.path(ddir, 'sl_pc_solo_margin_table.csv'))
+## write to disk
+write_csv(sl_dl_, path = file.path(cdir, 'sl_dl_solo_margin_table.csv'))
+write_csv(sl_ul_, path = file.path(cdir, 'sl_ul_solo_margin_table.csv'))
+write_csv(sl_pc_, path = file.path(cdir, 'sl_pc_solo_margin_table.csv'))
 
+## compute margins
 sl_dl <- get_margin_quad(sl_beta[,1:2], x_range) %>% mutate(type = 'dl')
 vi_dl <- get_margin_quad(vi_beta[,1:2], x_range) %>% mutate(type = 'dl')
 sl_ul <- get_margin_quad(sl_beta[,3:4], x_range) %>% mutate(type = 'ul')
@@ -382,13 +362,15 @@ vi_ul <- get_margin_quad(vi_beta[,3:4], x_range) %>% mutate(type = 'ul')
 sl_pc <- get_margin_quad(sl_beta[,5:6], x_range) %>% mutate(type = 'pc')
 vi_pc <- get_margin_quad(vi_beta[,5:6], x_range) %>% mutate(type = 'pc')
 
-write_csv(sl_dl, path = file.path(ddir, 'sl_dl_margin_table.csv'))
-write_csv(vi_dl, path = file.path(ddir, 'vi_dl_margin_table.csv'))
-write_csv(sl_ul, path = file.path(ddir, 'sl_ul_margin_table.csv'))
-write_csv(vi_ul, path = file.path(ddir, 'vi_ul_margin_table.csv'))
-write_csv(sl_pc, path = file.path(ddir, 'sl_pc_margin_table.csv'))
-write_csv(vi_pc, path = file.path(ddir, 'vi_pc_margin_table.csv'))
+## write to disk
+write_csv(sl_dl, path = file.path(cdir, 'sl_dl_margin_table.csv'))
+write_csv(vi_dl, path = file.path(cdir, 'vi_dl_margin_table.csv'))
+write_csv(sl_ul, path = file.path(cdir, 'sl_ul_margin_table.csv'))
+write_csv(vi_ul, path = file.path(cdir, 'vi_ul_margin_table.csv'))
+write_csv(sl_pc, path = file.path(cdir, 'sl_pc_margin_table.csv'))
+write_csv(vi_pc, path = file.path(cdir, 'vi_pc_margin_table.csv'))
 
+## plot varying intercept, dl margin
 g <- ggplot(vi_dl, aes(x = x, y = med)) +
     geom_hline(aes(yintercept = 0), linetype = 'dashed') +
     geom_ribbon(aes(ymin = lo_ci, ymax = hi_ci), alpha = 0.3) +
@@ -404,13 +386,15 @@ g <- ggplot(vi_dl, aes(x = x, y = med)) +
           panel.background = element_blank(),
           axis.line = element_line(colour = 'black'))
 
+## save plot
 ggsave(filename = 'vi_dl.pdf',
-               plot = g,
-               device = 'pdf',
-               path = fdir,
-               width = 8,
-               height = 4)
+       plot = g,
+       device = 'pdf',
+       path = fdir,
+       width = 8,
+       height = 4)
 
+## plot single level, download margin
 g <- ggplot(sl_dl, aes(x = x, y = med)) +
     geom_hline(aes(yintercept = 0), linetype = 'dashed') +
     geom_ribbon(aes(ymin = lo_ci, ymax = hi_ci), alpha = 0.3) +
@@ -426,30 +410,31 @@ g <- ggplot(sl_dl, aes(x = x, y = med)) +
           panel.background = element_blank(),
           axis.line = element_line(colour = 'black'))
 
+## save plot
 ggsave(filename = 'sl_dl.pdf',
-               plot = g,
-               device = 'pdf',
-               path = fdir,
-               width = 8,
+       plot = g,
+       device = 'pdf',
+       path = fdir,
+       width = 8,
        height = 4)
 
+## -------------------------------
 ## COMBO: download + upload margin
+## -------------------------------
+
+## set axis ranges
 x_range <- seq(0,10,.1)
-get_y_range <- function(df, x_range) {
-    y_range <- with(df, seq(min(pdw2_upload)/min(pdw2_download),
-                            max(pdw2_upload)/max(pdw2_download),
-                            length.out = length(x_range)))
-    x_range * y_range
-}
 y_range <- get_y_range(df_oap, x_range)
 
+## compute margins
 comb_sl <- get_margin_mult(df, sl_beta[,1:2], sl_beta[,3:4], x_range, y_range)
-write_csv(comb_sl, path = file.path(ddir, 'comb_sl_margin_table.csv'))
 comb_vi <- get_margin_mult(df, vi_beta[,1:2], vi_beta[,3:4], x_range, y_range)
 
-## write for later reference
-write_csv(comb_vi, path = file.path(ddir, 'comb_vi_margin_table.csv'))
+## write to disk
+write_csv(comb_sl, path = file.path(cdir, 'comb_sl_margin_table.csv'))
+write_csv(comb_vi, path = file.path(cdir, 'comb_vi_margin_table.csv'))
 
+## plot single-level, dl+ul
 g <- ggplot(comb_sl, aes(x = x, y = med)) +
     geom_hline(aes(yintercept = 0), linetype = 'dashed') +
     geom_ribbon(aes(ymin = lo_ci, ymax = hi_ci), fill = 'red', alpha = 0.4) +
@@ -462,13 +447,15 @@ g <- ggplot(comb_sl, aes(x = x, y = med)) +
          y = 'Percent change in number of students\n'%+%
              'taking some online courses')
 
+## save plot
 ggsave(filename = 'sl_dl_ul.pdf',
-               plot = g,
-               device = 'pdf',
-               path = fdir,
-               width = 8,
+       plot = g,
+       device = 'pdf',
+       path = fdir,
+       width = 8,
        height = 4)
 
+## plot varying-intercept, dl+ul
 g <- ggplot(comb_vi, aes(x = x, y = med)) +
     geom_hline(aes(yintercept = 0), linetype = 'dashed') +
     geom_ribbon(aes(ymin = lo_ci, ymax = hi_ci), fill = 'red', alpha = 0.4) +
@@ -481,11 +468,12 @@ g <- ggplot(comb_vi, aes(x = x, y = med)) +
          y = 'Percent change in number of students\n'%+%
              'taking some online courses')
 
+## save plot
 ggsave(filename = 'vi_dl_ul.pdf',
-               plot = g,
-               device = 'pdf',
-               path = fdir,
-               width = 8,
+       plot = g,
+       device = 'pdf',
+       path = fdir,
+       width = 8,
        height = 4)
 
 ## =============================================================================

@@ -1,9 +1,9 @@
 ################################################################################
 ##
-## <PROJ> Dissertation
-## <FILE> make_stan_data.R
-## <AUTH> Benjamin Skinner
-## <INIT> 27 October 2016
+## [ PROJ ] Open access broadband
+## [ FILE ] make_stan_data.R
+## [ AUTH ] Benjamin Skinner: @btskinner
+## [ INIT ] 27 October 2016
 ##
 ################################################################################
 
@@ -14,7 +14,7 @@ rm(list = ls())
 args <- commandArgs(trailingOnly = TRUE)
 
 ## libraries
-libs <- c('dplyr', 'readr', 'rstan')
+libs <- c('tidyverse', 'rstan')
 lapply(libs, require, character.only = TRUE)
 
 ## paste function
@@ -58,9 +58,6 @@ first_level_vars <- c('twoyr',          # == 1 if two year
                       'rucc_7',
                       'rucc_8',
                       'rucc_9')
-
-## drop indicator for two-year in two-year only models
-## first_level_vars_two <- grep('[^twoyr]', first_level_vars, value = TRUE)
 
 ## =============================================================================
 ## READ IN DATA
@@ -488,198 +485,6 @@ if (grepl('beta', mod_type)) {
         }
     }
 }
-
-## ## =============================================================================
-## ## SET STAN DATA: TWO YEAR ONLY
-## ## =============================================================================
-
-## ## filter to two-year only
-## df <- df %>% filter(twoyr == 1)
-
-## ## vector of states using Stan-approved integers with no skips like fips
-## state <- df %>%
-##     ## quick kludge b/c IN drops out
-##     mutate(ststan = ifelse(ststan > 12, ststan - 1, ststan)) %>%
-##     .[['ststan']]
-
-## ## second-level predictors
-## z <- df %>%
-##     distinct(stfips, .keep_all = TRUE) %>%
-##     select_(.dots = second_level_vars) %>%
-##     as.matrix(.)
-
-## ## vector of regions for second-level intercept
-## region <- df %>%
-##     distinct(stfips, .keep_all = TRUE) %>%
-##     .[['region']]
-
-## ## dimensions
-## J = length(unique(state))
-## L = ncol(z)
-## R = length(unique(region))
-
-## ## =============================================================================
-## ## CHECK FOR MODEL TYPE
-## ## =============================================================================
-
-## if (grepl('beta', mod_type)) {
-
-##     ## -------------------------------------
-##     ## BETA
-##     ## -------------------------------------
-
-##     for (meas in bb_measures) {
-
-##         ## empirical outcome: at least some
-##         y <- df %>% .[['efdesom']]
-
-##         ## likelihood is bionmial (success, total): these are totals
-##         trials <- df %>% .[['efdetot']]
-
-##         ## empirical outcome: proportion
-##         y <- y / trials
-
-##         ## first-level matrix of school-level predictors
-##         if (grepl('_all', meas)) {
-
-##             ## get measure vector (need so get right weighted version)
-##             m <- grep(strsplit(meas, '_')[[1]][1], names(df), value = TRUE)
-
-##             ## all broadband measures
-##             x <- df %>%
-##                 mutate_(bb_meas_1 = m[1],
-##                         bb_meas_sq_1 = quote(bb_meas_1^2),
-##                         bb_meas_2 = m[2],
-##                         bb_meas_sq_2 = quote(bb_meas_2^2),
-##                         bb_meas_3 = m[3],
-##                         bb_meas_sq_3 = quote(bb_meas_3^2)) %>%
-##                 select_(.dots = c('bb_meas_1', 'bb_meas_sq_1',
-##                                   'bb_meas_2', 'bb_meas_sq_2',
-##                                   'bb_meas_3', 'bb_meas_sq_3',
-##                                   first_level_vars_two)) %>%
-##                 as.matrix(.)
-
-##         } else {
-
-##             ## only one broadband measure
-##             x <- df %>%
-##                 mutate_(bb_meas = meas,
-##                         bb_meas_sq = quote(bb_meas^2)) %>%
-##                 select_(.dots = c('bb_meas', 'bb_meas_sq',
-##                                   first_level_vars_two)) %>%
-##                 as.matrix(.)
-##         }
-
-##         ## dimensions
-##         N = nrow(x)
-##         K = ncol(x)
-
-##         if (mod_type == 'vi_beta') {
-
-##             ## multilevel: varying intercept
-##             stan_rdump(c('y', 'state', 'x', 'z', 'N', 'K',
-##                          'J', 'L', 'R', 'region'),
-##                        file = sdir %+% 'vi_beta_two_' %+% meas %+% '.R.data')
-
-##         } else if (mod_type == 'vs_beta_all') {
-
-##             ## multilevel: varying slope
-##             stan_rdump(c('y', 'state', 'x', 'z', 'N', 'K',
-##                          'J', 'L', 'R', 'region'),
-##                        file = sdir %+% 'vs_beta_all_two_' %+%
-##                            meas %+% '.R.data')
-
-##         } else if (mod_type == 'vs_beta') {
-
-##             ## multilevel: varying slope
-##             stan_rdump(c('y', 'state', 'x', 'z', 'N', 'K',
-##                          'J', 'L', 'R', 'region'),
-##                        file = sdir %+% 'vs_beta_two_' %+% meas %+% '.R.data')
-
-##         } else {
-
-##             ## single level
-##             stan_rdump(c('y', 'x', 'N', 'K'),
-##                        file = sdir %+% 'sl_beta_two_' %+% meas %+% '.R.data')
-##         }
-##     }
-
-## } else if (grepl('normal', mod_type)) {
-
-##     ## -------------------------------------
-##     ## NORMAL
-##     ## -------------------------------------
-
-##     for (meas in bb_measures) {
-
-##         ## empirical outcome: log(at least some)
-##         y <- df %>% .[['lefdesom']]
-
-##         ## first-level matrix of school-level predictors
-##         if (grepl('_all', meas)) {
-
-##             ## get measure vector (need so get right weighted version)
-##             m <- grep(strsplit(meas, '_')[[1]][1], names(df), value = TRUE)
-
-##             ## all broadband measures
-##             x <- df %>%
-##                 mutate_(bb_meas_1 = m[1],
-##                         bb_meas_sq_1 = quote(bb_meas_1^2),
-##                         bb_meas_2 = m[2],
-##                         bb_meas_sq_2 = quote(bb_meas_2^2),
-##                         bb_meas_3 = m[3],
-##                         bb_meas_sq_3 = quote(bb_meas_3^2)) %>%
-##                 select_(.dots = c('bb_meas_1', 'bb_meas_sq_1',
-##                                   'bb_meas_2', 'bb_meas_sq_2',
-##                                   'bb_meas_3', 'bb_meas_sq_3',
-##                                   first_level_vars_two)) %>%
-##                 as.matrix(.)
-
-##         } else {
-
-##             ## only one broadband measure
-##             x <- df %>%
-##                 mutate_(bb_meas = meas,
-##                         bb_meas_sq = quote(bb_meas^2)) %>%
-##                 select_(.dots = c('bb_meas', 'bb_meas_sq',
-##                                   first_level_vars_two)) %>%
-##                 as.matrix(.)
-##         }
-
-##         ## dimensions
-##         N = nrow(x)
-##         K = ncol(x)
-
-##         if (mod_type == 'vi_normal') {
-
-##             ## multilevel: varying intercept
-##             stan_rdump(c('y', 'state', 'x', 'z', 'N', 'K', 'J',
-##                          'L', 'R', 'region'),
-##                        file = sdir %+% 'vi_normal_two_' %+% meas %+% '.R.data')
-
-##         } else if (mod_type == 'vs_normal_all') {
-
-##             ## multilevel: varying slope
-##             stan_rdump(c('y', 'state', 'x', 'z', 'N', 'K', 'J',
-##                          'L', 'R', 'region'),
-##                        file = sdir %+% 'vs_normal_all_two_' %+%
-##                            meas %+% '.R.data')
-
-##         } else if (mod_type == 'vs_normal') {
-
-##             ## multilevel: varying slope
-##             stan_rdump(c('y', 'state', 'x', 'z', 'N', 'K', 'J',
-##                          'L', 'R', 'region'),
-##                        file = sdir %+% 'vs_normal_two_' %+% meas %+% '.R.data')
-
-##         } else {
-
-##             ## single level
-##             stan_rdump(c('y','x', 'N', 'K'),
-##                        file = sdir %+% 'sl_normal_two_' %+% meas %+% '.R.data')
-##         }
-##     }
-## }
 
 ## =============================================================================
 ## END FILE

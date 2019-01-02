@@ -1,14 +1,15 @@
 ################################################################################
 ##
-## <PROJ> Dissertaion utility functions (R)
-## <FILE> utils.R
-## <AUTH> Benjamin Skinner
-## <INIT> 28 August 2016
+## [ PROJ ] Open access broadband
+## [ FILE ] utils.R
+## [ AUTH ] Benjamin Skinner: @btskinner
+## [ INIT ] 28 August 2016
 ##
 ################################################################################
 
 ## quick paste
 `%+%` <- function(a,b) paste(a, b, sep = '')
+`%_%` <- function(a,b) paste(a, b, sep = '_')
 
 ## check proportion missing
 ## https://gist.github.com/stephenturner/841686
@@ -27,6 +28,15 @@ propmiss <- function(dataframe) {
 	row.names(d) <- NULL
 	d <- cbind(d[ncol(d)],d[-ncol(d)])
 	return(d[order(d$propmiss), ])
+}
+
+## check if file exists and then download if not
+check_get <- function(file, path, url) {
+    if (!file.exists(file.path(path, file))) {
+        download.file(url = url, destfile = file.path(path, file))
+    } else {
+        message(file.path(path, file) %+% ' already exists!')
+    }
 }
 
 ## lon/lat to county fips
@@ -75,3 +85,60 @@ latlong2county <- function(points_tbl) {
 
     return(out)
 }
+
+## get marginal with quadratic
+get_margin_quad <- function(sample_mat, x_range, ci = 95) {
+    lo <- (1 - (ci / 100)) / 2
+    hi <- 1 - lo
+    out <- purrr::map(x_range,
+                      ~ sample_mat[,1] + (2*sample_mat[,2]*.x)) %>%
+        setNames(as.character(x_range)) %>%
+        as_tibble() %>%
+        gather(x, range) %>%
+        group_by(x) %>%
+        summarize(lo_ci = quantile(range, lo),
+                  med = quantile(range, .5),
+                  mean = mean(range),
+                  hi_ci = quantile(range, hi),
+                  gt0 = mean(range > 0)) %>%
+        ungroup() %>%
+        mutate(x = as.numeric(x),
+               x = x + 1) %>%
+        arrange(x)
+    return(out)
+}
+
+## get marginal for two base / two quadratics
+get_margin_mult <- function(df, dl_mat, ul_mat, x_range, y_range, ci = 95) {
+    lo <- (1 - (ci / 100)) / 2
+    hi <- 1 - lo
+    out <- purrr::map2(x_range, y_range,
+                       ~ dl_mat[,1] + (2*dl_mat[,2]*.x)
+                       + ul_mat[,1] + (2*ul_mat[,2]*.y)) %>%
+        bind_cols() %>%
+        setNames(as.character(x_range)) %>%
+        gather(x, range) %>%
+        group_by(x) %>%
+        summarize(lo_ci = quantile(range, lo),
+                  med = quantile(range, .5),
+                  mean = mean(range),
+                  hi_ci = quantile(range, hi),
+                  gt0 = mean(range > 0)) %>%
+        ungroup() %>%
+        mutate(x = as.numeric(x),
+               x = x + 1) %>%
+        arrange(x)
+    return(out)
+}
+
+## get a y-axis range based on x-axis range
+get_y_range <- function(df, x_range) {
+    y_range <- with(df, seq(min(pdw2_upload)/min(pdw2_download),
+                            max(pdw2_upload)/max(pdw2_download),
+                            length.out = length(x_range)))
+    x_range * y_range
+}
+
+## -----------------------------------------------------------------------------
+## END SCRIPT
+################################################################################

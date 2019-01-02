@@ -5,15 +5,15 @@
 # [ AUTH ] Benjamin Skinner; @btskinner (GitHub; Twitter); btskinner.me
 # [ CITE ]
 #
-#  Skinner, B. (). Making the connection: broadband access and online
+#  Skinner, B.T. (2010). Making the connection: broadband access and online
 #    course enrollment at public open admissions institutions. Research in
-#    Higher Education.       
+#    Higher Education, 1-40. DOI: 10.1007/s11162-018-9539-6      
 #
 ################################################################################
 
 # --- settings -----------------------------------
 
-# set to https or ssh
+# set to https or ssh (probably https for most)
 git_type := ssh
 
 # cores
@@ -42,6 +42,10 @@ R_DIR := $(SCRIPT_DIR)/r
 OUT_DIR := output
 PWD := $(shell pwd)
 
+# table/figures
+TABLE_DIR := tables
+FIGURE_DIR := figures
+
 # stan repo
 ifneq ($(git_type), ssh)
 	CMDSTAN_GIT := git@github.com:stan-dev/cmdstan.git
@@ -51,16 +55,18 @@ endif
 
 # --- build targets ------------------------------
 
-.PHONY: all cmdstan stanfiles data analysis-data broadband-data
-.PHONY: analysis core-analysis sens-analysis
+.PHONY: all cmdstan stanfiles data analysis-data broadband-data get-data
+.PHONY: analysis core-analysis sens-analysis rpkgs output
 
-all: cmdstan data stanfiles analysis
+all: cmdstan rpkgs data stanfiles analysis
+
+stanfiles: $(patsubst %.stan, %, $(wildcard $(STAN_DIR)/*.stan))
 
 SL_SAMPLES := $(OUT_DIR)/sl_normal_full_pdw2_download_1.csv
 SL_SAMPLES += $(OUT_DIR)/sl_beta_full_pdw2_download_1.csv
 VI_SAMPLES := $(OUT_DIR)/vi_normal_full_pdw2_download_1.csv
 VI_SAMPLES += $(OUT_DIR)/vi_beta_full_pdw2_download_1.csv
-core-analysis: $(SL_SAMPLES) $(VI_SAMPLES) # $(VS_SAMPLES_1) $(VS_SAMPLES_2)
+core-analysis: $(SL_SAMPLES) $(VI_SAMPLES)
 
 SL_SAMPLES_S := $(OUT_DIR)/sl_normal_sens_pdw2_download_1.csv
 SL_SAMPLES_S += $(OUT_DIR)/sl_beta_sens_pdw2_download_1.csv
@@ -74,9 +80,9 @@ broadband-data: $(BDATA_DIR)/bb.db
 
 analysis-data: $(addprefix $(CDATA_DIR)/,$(addsuffix .csv,scbb analysis_oap ipeds))
 
-data: broadband-data analysis-data
+data: get-data broadband-data analysis-data
 
-stanfiles: $(patsubst %.stan, %, $(wildcard $(STAN_DIR)/*.stan))
+output: $(TABLE_DIR)/table_figures.pdf
 
 # --- Stan ---------------------------------------
 
@@ -98,7 +104,19 @@ $(STAN_DIR)/%: $(STAN_DIR)/%.stan
 	@echo "Compiling Stan scripts"
 	(cd $(CMDSTAN_DIR) && make $(PWD)/$(basename $<))
 
+# --- R packages ---------------------------------
+
+# get R packages
+rpkgs:
+	@echo "Getting required R packages"
+	Rscript $(R_DIR)/get_packages.R
+
 # --- Data ---------------------------------------
+
+# get data
+get-data: $(IPEDS_DATA) 
+	@echo "Downloading raw data files"
+	Rscript $(R_DIR)/get_data.R
 
 # final analysis dataset
 ANALYSIS_DATA_DEPS := $(CDATA_DIR)/ipeds.csv $(CDATA_DIR)/scbb.csv
@@ -120,6 +138,7 @@ $(CDATA_DIR)/ipeds.csv: $(R_DIR)/clean_ipeds.R
 BB_DB_DEPS := $(addprefix $(BASH_DIR)/, \
 	$(addsuffix .sh, make_bb bb_db_clean bb_table_clean bb_table_create))
 
+# build broadband database
 $(BDATA_DIR)/bb.db: $(BB_DB_DEPS)
 	$(BASH_DIR)/make_bb.sh $(NBM_ZIP_DIR) $(BDATA_DIR) $(BASH_DIR)
 
@@ -145,7 +164,6 @@ $(OUT_DIR)/vi_beta_full_pdw2_download_1.csv: $(STAN_DIR)/vi_beta
 $(OUT_DIR)/vi_normal_full_pdw2_download_1.csv: $(STAN_DIR)/vi_normal
 	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) vi_normal full $(OUT_DIR) both $(R_DIR)
 
-
 # --- Sensitivity analysis -----------------------
 
 # Single level ----------
@@ -168,9 +186,26 @@ $(OUT_DIR)/vi_beta_sens_pdw2_download_1.csv: $(STAN_DIR)/vi_beta
 $(OUT_DIR)/vi_normal_sens_pdw2_download_1.csv: $(STAN_DIR)/vi_normal
 	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) vi_normal sens $(OUT_DIR) both $(R_DIR)
 
-# --- CLEAN --------------------------------------
+# --- Figures / Tables ---------------------------
+
+$(TABLE_DIR)/%.tex: $(TABLE_DIR)/%.Rnw 
+	@echo "Making figures"
+	Rscript $(R_DIR)/make_figures.R $(R_DIR) $(DATA_DIR) $(FIGURE_DIR) $(OUT_DIR)
+	@echo "Making table / figure document"
+	Rscript -e "knitr::knit('$<','$@')"
+
+$(TABLE_DIR)/%.pdf: $(TABLE_DIR)/%.tex
+	latexmk -pdf $<
+
+# --- Clean --------------------------------------
 
 clean:
 	$(RM) -r $(BUILDDIR) $(TARGETDIR)
+	$(RM) -r $(DATA_DIR)/*
+	$(RM) -r $(CMDSTAN_DIR)
+	$(RM) -r $(OUT_DIR)
+	$(RM) -r $(TABLE_DIR)/*.tex $(TABLE_DIR)/tex
+	$(RM) -r $(FIGURE_DIR)/*.pdf
+	$(RM) table_figures.*
 
 
