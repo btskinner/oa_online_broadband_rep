@@ -66,20 +66,20 @@ cores := 4
 You can you can also run the scripts one by one. You will need to:
 
 1. Get the data files listed in `./data/README.md`  
-2. Download and build
-   [CmdStan](https://mc-stan.org/users/interfaces/cmdstan)  
-3. Compile `*.stan` model scripts  
-4. Build Broadband database using scripts in `./scripts/bash`  
+2. Build Broadband database using scripts in `./scripts/bash`  
 
 ```bash
 cd ./scripts/bash
 ./make_bb.sh ../../data/broadband/zip ../../data/broadband .
 ```
 
-5. Download required R packages, found in `get_packages.R`  
-6. Clean IPEDS using `clean_ipeds.R`  
-7. Clean Broadband using `clean_bb.R`  
-8. Clean data using `clean_data.R`  
+3. Download required R packages, found in `get_packages.R`  
+4. Clean IPEDS using `clean_ipeds.R`  
+5. Clean Broadband using `clean_bb.R`  
+6. Clean data using `clean_data.R`  
+7. Download and build
+   [CmdStan](https://mc-stan.org/users/interfaces/cmdstan)  
+8. Compile `*.stan` model scripts  
 9. Run analyses using `./scripts/bash/run_stan.sh`  
 
 ```bash
