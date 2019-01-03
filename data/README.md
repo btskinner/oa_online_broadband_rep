@@ -82,5 +82,5 @@ files are needed:
 State appropriations by year come from the State Higher Education
 Executive Office.
 
-1. [Finance](www.sheeo.org/sites/default/files/State_by_State_Wave_Charts_FY15_0.xlsx)  
+1. [Finance](https://www.sheeo.org/sites/default/files/State_by_State_Wave_Charts_FY15_0.xlsx)  
 
