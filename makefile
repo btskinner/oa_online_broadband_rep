@@ -5,7 +5,7 @@
 # [ AUTH ] Benjamin Skinner; @btskinner (GitHub; Twitter); btskinner.me
 # [ CITE ]
 #
-#  Skinner, B.T. (2010). Making the connection: broadband access and online
+#  Skinner, B.T. (2019). Making the connection: broadband access and online
 #    course enrollment at public open admissions institutions. Research in
 #    Higher Education, 1-40. DOI: 10.1007/s11162-018-9539-6      
 #
@@ -19,17 +19,17 @@ git_type := ssh
 # cores
 cores := 8
 
-# stan version
-stanver := 2.18.0
-
 # --- directories --------------------------------
 
 # data 
 DATA_DIR := data
-CDATA_DIR := $(DATA_DIR)/cleaned
-GDATA_DIR := $(DATA_DIR)/geo
+ADATA_DIR := $(DATA_DIR)/acs
 BDATA_DIR := $(DATA_DIR)/broadband
 NBM_ZIP_DIR := $(BDATA_DIR)/zip
+CDATA_DIR := $(DATA_DIR)/cleaned
+GDATA_DIR := $(DATA_DIR)/geo
+IDATA_DIR := $(DATA_DIR)/ipeds
+SDATA_DIR := $(DATA_DIR)/sheeo
 
 # scripts
 SCRIPT_DIR := scripts
@@ -55,10 +55,7 @@ endif
 
 # --- build targets ------------------------------
 
-.PHONY: all cmdstan stanfiles data analysis-data broadband-data get-data
-.PHONY: analysis core-analysis sens-analysis rpkgs output
-
-all: cmdstan rpkgs data stanfiles analysis
+all: cmdstan rpkgs data stanfiles analysis output
 
 stanfiles: $(patsubst %.stan, %, $(wildcard $(STAN_DIR)/*.stan))
 
@@ -84,25 +81,35 @@ data: get-data broadband-data analysis-data
 
 output: $(TABLE_DIR)/table_figures.pdf
 
+ifndef VERBOSE
+.SILENT:
+endif
+
+.PHONY: all cmdstan stanfiles data analysis-data broadband-data get-data
+.PHONY: analysis core-analysis sens-analysis rpkgs output
+
 # --- Stan ---------------------------------------
 
 # get cmdstan and build
 cmdstan:
 ifneq ($(wildcard $(CMDSTAN_DIR)/.),)
 	@echo "Cmdstan already exists"
-	@echo "Checking out CmdStan version $(stanver) and building"
-	(cd $(CMDSTAN_DIR) && make build -j$(cores))
+	@echo "Checking out CmdStan and building"
+	(cd $(CMDSTAN_DIR) && make build -j$(cores) --silent)
 else
 	@echo "Cloning CmdStan"
-	@echo "checking out CmdStan version $(stanver) and building"
-	git clone $(CMDSTAN_GIT) $(CMDSTAN_DIR) --recursive
-	(cd $(CMDSTAN_DIR) && make build -j$(cores))
+	@echo "Checking out CmdStan and building"
+	git clone $(CMDSTAN_GIT) $(CMDSTAN_DIR) --recursive -q
+	(cd $(CMDSTAN_DIR) && make build -j$(cores) --silent)
 endif
 
 # compile stan files
 $(STAN_DIR)/%: $(STAN_DIR)/%.stan
 	@echo "Compiling Stan scripts"
 	(cd $(CMDSTAN_DIR) && make $(PWD)/$(basename $<))
+
+# store stan file extra
+STAN_FILE_EXT := $(filter-out $(STAN_DIR)/*.stan, $(STAN_DIR)/*)
 
 # --- R packages ---------------------------------
 
@@ -116,7 +123,7 @@ rpkgs:
 # get data
 get-data: $(IPEDS_DATA) 
 	@echo "Downloading raw data files"
-	Rscript $(R_DIR)/get_data.R
+	Rscript $(R_DIR)/get_data.R $(R_DIR) $(DATA_DIR)
 
 # final analysis dataset
 ANALYSIS_DATA_DEPS := $(CDATA_DIR)/ipeds.csv $(CDATA_DIR)/scbb.csv
@@ -128,10 +135,12 @@ $(CDATA_DIR)/analysis_oap.csv: $(ANALYSIS_DATA_DEPS)
 SCBB_DATA_DEPS := $(R_DIR)/clean_bb.R $(CDATA_DIR)/ipeds.csv
 SCBB_DATA_DEPS += $(BDATA_DIR)/bb.db
 $(CDATA_DIR)/scbb.csv: $(SCBB_DATA_DEPS)
+	@echo "Cleaning broadband data"
 	Rscript $(R_DIR)/clean_bb.R $(R_DIR) $(DATA_DIR)
 
 # IPEDS dataset
 $(CDATA_DIR)/ipeds.csv: $(R_DIR)/clean_ipeds.R
+	@echo "Cleaning IPEDS data"
 	Rscript $(R_DIR)/clean_ipeds.R $(R_DIR) $(DATA_DIR)
 
 # National Broadband Map CSV (ZIP) files to SQLite DB
@@ -140,72 +149,98 @@ BB_DB_DEPS := $(addprefix $(BASH_DIR)/, \
 
 # build broadband database
 $(BDATA_DIR)/bb.db: $(BB_DB_DEPS)
+	@echo "Building broadband database from flat files"
 	$(BASH_DIR)/make_bb.sh $(NBM_ZIP_DIR) $(BDATA_DIR) $(BASH_DIR)
 
-# --- Analysis -----------------------------------
+# --- Main Analysis ------------------------------
 
-# Single level ----------
-
-# beta
-$(OUT_DIR)/sl_beta_full_pdw2_download_1.csv: $(STAN_DIR)/sl_beta
-	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) sl_beta full $(OUT_DIR) both $(R_DIR)
-
-# normal
+# single-level
 $(OUT_DIR)/sl_normal_full_pdw2_download_1.csv: $(STAN_DIR)/sl_normal
+	mkdir -p $(OUT_DIR)
+	@echo "Running single-level normal models"
 	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) sl_normal full $(OUT_DIR) both $(R_DIR)
 
-# Varying intercept -----
-
-# beta
-$(OUT_DIR)/vi_beta_full_pdw2_download_1.csv: $(STAN_DIR)/vi_beta
-	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) vi_beta full $(OUT_DIR) both $(R_DIR)
-
-# normal
+# varying-intercept
 $(OUT_DIR)/vi_normal_full_pdw2_download_1.csv: $(STAN_DIR)/vi_normal
+	mkdir -p $(OUT_DIR)	
+	@echo "Running varying-intercept normal models"
 	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) vi_normal full $(OUT_DIR) both $(R_DIR)
+
+# --- Appendix A ---------------------------------
+
+# single-level
+$(OUT_DIR)/sl_beta_full_pdw2_download_1.csv: $(STAN_DIR)/sl_beta
+	mkdir -p $(OUT_DIR)
+	@echo "Running single-level beta models for appendix A"
+	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) sl_beta full $(OUT_DIR) both $(R_DIR)
+
+# varying-intercept
+$(OUT_DIR)/vi_beta_full_pdw2_download_1.csv: $(STAN_DIR)/vi_beta
+	mkdir -p $(OUT_DIR)
+	@echo "Running varying-intercept beta models for appendix A"
+	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) vi_beta full $(OUT_DIR) both $(R_DIR)
 
 # --- Sensitivity analysis -----------------------
 
 # Single level ----------
 
-# beta
-$(OUT_DIR)/sl_beta_sens_pdw2_download_1.csv: $(STAN_DIR)/sl_beta
-	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) sl_beta sens $(OUT_DIR) both $(R_DIR)
-
 # normal
 $(OUT_DIR)/sl_normal_sens_pdw2_download_1.csv: $(STAN_DIR)/sl_normal
+	mkdir -p $(OUT_DIR)
+	@echo "Running single-level normal models for appendix B"
 	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) sl_normal sens $(OUT_DIR) both $(R_DIR)
+
+# beta
+$(OUT_DIR)/sl_beta_sens_pdw2_download_1.csv: $(STAN_DIR)/sl_beta
+	mkdir -p $(OUT_DIR)
+	@echo "Running single-level beta models for appendix B"
+	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) sl_beta sens $(OUT_DIR) both $(R_DIR)
 
 # Varying intercept -----
 
-# beta
-$(OUT_DIR)/vi_beta_sens_pdw2_download_1.csv: $(STAN_DIR)/vi_beta
-	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) vi_beta sens $(OUT_DIR) both $(R_DIR)
-
 # normal
 $(OUT_DIR)/vi_normal_sens_pdw2_download_1.csv: $(STAN_DIR)/vi_normal
+	mkdir -p $(OUT_DIR)
+	@echo "Running varying-intercept normal models for appendix B"
 	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) vi_normal sens $(OUT_DIR) both $(R_DIR)
+
+# beta
+$(OUT_DIR)/vi_beta_sens_pdw2_download_1.csv: $(STAN_DIR)/vi_beta	
+	mkdir -p $(OUT_DIR)
+	@echo "Running varying-intercept beta models for appendix B"
+	$(BASH_DIR)/run_stan.sh $< $(CDATA_DIR) vi_beta sens $(OUT_DIR) both $(R_DIR)
 
 # --- Figures / Tables ---------------------------
 
 $(TABLE_DIR)/%.tex: $(TABLE_DIR)/%.Rnw 
 	@echo "Making figures"
 	Rscript $(R_DIR)/make_figures.R $(R_DIR) $(DATA_DIR) $(FIGURE_DIR) $(OUT_DIR)
-	@echo "Making table / figure document"
+	@echo "Making tables / figure document"
 	Rscript -e "knitr::knit('$<','$@')"
 
 $(TABLE_DIR)/%.pdf: $(TABLE_DIR)/%.tex
+	@echo "Compiling TeX document"
 	latexmk -pdf $<
+	$(RM) *.aux *.fdb_latexmk *.fls *.lof *.log *.lot *.out
 
 # --- Clean --------------------------------------
 
 clean:
+	@echo "Returning repo to initial state, removing all new files"
 	$(RM) -r $(BUILDDIR) $(TARGETDIR)
-	$(RM) -r $(DATA_DIR)/*
+	$(RM) -r $(ADATA_DIR)/co-est2015-alldata.csv
+	$(RM) -r $(BDATA_DIR) $(CDATA_DIR) $(GDATA_DIR) $(IDATA_DIR) $(SDATA_DIR)
 	$(RM) -r $(CMDSTAN_DIR)
 	$(RM) -r $(OUT_DIR)
-	$(RM) -r $(TABLE_DIR)/*.tex $(TABLE_DIR)/tex
-	$(RM) -r $(FIGURE_DIR)/*.pdf
+	# hack to save .stan scripts while removing all else
+	@mkdir -p $(SCRIPT_DIR)/tmp
+	@mv $(STAN_DIR)/*.stan $(SCRIPT_DIR)/tmp
+	$(RM) -r $(STAN_DIR)
+	@mkdir -p $(STAN_DIR)
+	@mv $(SCRIPT_DIR)/tmp/* $(STAN_DIR)
+	$(RM) -r $(SCRIPT_DIR)/tmp
+	$(RM) $(TABLE_DIR)/*.tex $(TABLE_DIR)/tex
+	$(RM) $(FIGURE_DIR)/*.pdf
 	$(RM) table_figures.*
 
 
