@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # command line arguments
-STAN_EXE=$1
-DATA_DIR=$2
-MOD_TYPE=$3
-DATA_TYPE=$4
-OUTD=$5
-BB_OPTS_VAL=$6
-R_DIR=$7
+STAN_EXE=$1			# Stan executable
+DATA_DIR=$2			# cleaned data directory
+MOD_TYPE=$3			# 'full' or 'sens'
+DATA_TYPE=$4			# match stan executable name
+OUTD=$5				# output directory
+BB_OPTS_VAL=$6			# 'both'
+R_DIR=$7			# directory for make_stan_data.R
 
 # name of Stan executable
 STAN_NME=$(basename $STAN_EXE)
@@ -50,19 +50,6 @@ do
 	DATA=${TMP_DIR}/${MOD_TYPE}_full_${bb}.R.data
 	OUTN=${MOD_TYPE}_full_${bb}
 
-	for i in {1..4}
-	do
-	    ./$STAN_EXE sample random seed=100605 \
-			id=$i data file=$DATA \
-			output file=${OUTD}/${OUTN}_$i.csv &
-	done
-	wait
-    fi
-
-    if [ $DATA_TYPE = 'two' ]; then
-	echo "Two-year only dataset"
-	DATA=${TMP_DIR}/${MOD_TYPE}_two_${bb}.R.data
-	OUTN=${MOD_TYPE}_two_${bb}
 	for i in {1..4}
 	do
 	    ./$STAN_EXE sample random seed=100605 \

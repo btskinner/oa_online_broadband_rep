@@ -11,6 +11,8 @@
 rm(list = ls())
 
 ## command line arguments
+## args[1] <- <path>/<to>/scripts/r
+## args[2] <- <path>/<to>/data
 args <- commandArgs(trailingOnly = TRUE)
 
 ## read in utility functions

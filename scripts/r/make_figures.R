@@ -13,6 +13,10 @@ libs <- c('tidyverse','rstan','broom','RSQLite','maps','mapproj','maptools',
 sapply(libs, require, character.only = TRUE)
 
 ## command line arguments
+## args[1] <- <path>/<to>/scripts/r
+## args[2] <- <path>/<to>/data
+## args[3] <- <path>/<to>/figures
+## args[4] <- <path>/<to>/output
 args <- commandArgs(trailingOnly = TRUE)
 
 ## read in utility functions
