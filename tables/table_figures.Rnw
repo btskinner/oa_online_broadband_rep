@@ -1,0 +1,1389 @@
+\documentclass[10pt]{article}
+
+% packages
+\usepackage[utf8]{inputenc}
+\usepackage[margin = 1in]{geometry}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{apacite}
+\usepackage{url}
+\usepackage{amstext}
+\usepackage[justification=raggedright]{caption}
+\usepackage[flushleft]{threeparttable}
+\usepackage{longtable}
+\usepackage{rotating}
+\usepackage[linktocpage]{hyperref}
+
+% new commands
+\newcommand{\boldbeta}{\boldsymbol{\beta}}
+\newcommand{\boldgamma}{\boldsymbol{\gamma}}
+\newcommand{\boldBeta}{\boldsymbol{B}}
+\newcommand{\boldalpha}{\boldsymbol{\alpha}}
+\newcommand{\bolddelta}{\boldsymbol{\delta}}
+\newcommand{\boldeta}{\boldsymbol{\eta}}
+\newcommand{\boldpsi}{\boldsymbol{\psi}}
+\newcommand{\boldx}{\mathbf{x}}
+\newcommand{\boldz}{\mathbf{z}}
+\newcommand{\boldw}{\mathbf{w}}
+\newcommand{\boldX}{\mathbf{X}}
+\newcommand{\boldy}{\mathbf{y}}
+\newcommand{\boldY}{\mathbf{Y}}
+\newcommand{\boldc}{\mathbf{c}}
+\newcommand{\boldp}{\boldsymbol{p}}
+\newcommand{\boldF}{\boldsymbol{F}}
+
+\newcommand{\RR}{\raggedright\arraybackslash}
+\newcommand{\RL}{\raggedleft\arraybackslash}
+
+\newcommand{\figdir}{./figures}
+
+\title{\LARGE Figures and Tables \\
+  \normalsize for \\
+  \Large Making the Connection: Broadband Access and Online Course
+  Enrollment at Public Open Admissions Institutions \\
+  \href{https://link.springer.com/article/10.1007/s11162-018-9539-6}
+  {DOI: 10.1007/s11162-018-9539-6}} 
+\author{Benjamin Skinner\footnote{Website:
+    \href{https://www.btskinner.me}{www.btskinner.me}}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Begin document
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\maketitle
+
+\listoffigures
+\listoftables
+\clearpage
+
+<<setup, include = FALSE, cache = FALSE, message = FALSE>>=
+
+## libraries
+libs <- c('tidyverse','knitr','rstan','xtable','broom')
+lapply(libs, require, character.only = TRUE)
+
+## directories
+ddir <- '../data/cleaned/'
+fdir <- '../figures'
+odir <- '../output/'
+tdir <- './tex/'
+
+dir.create(tdir, showWarnings = TRUE)
+
+## functions
+`%+%` <- function(a,b) paste(a, b, sep = '')
+`%_%` <- function(a,b) paste(a, b, sep = '_')
+remove_end <- function(x, n) { substr(x, 1, nchar(x) - n) }
+add_parens <- function(matrix, column, rows) {
+    matrix[rows, column] <- gsub('(.*)', '(\\1)', matrix[rows, column])
+    return(matrix)
+}
+postFuncPos <- function(x) { mean(x > 0) }
+postFuncNeg <- function(x) { mean(x < 0) }
+
+## options
+options(scipen = 999)
+
+## set global chunk options
+opts_chunk$set(fig.align = 'center', fig.show = 'hold', echo = FALSE,
+               cache = FALSE, results = 'asis', message = FALSE)
+
+@
+
+<<get_data>>=
+
+df <- read_csv(ddir %+% 'analysis_oap.csv') %>% filter(unitid != 150987)
+
+## get ststan/st crosswalk
+cw_full <- df %>%
+    select(stfips, stabbr, stname, ststan) %>%
+    distinct(stfips, .keep_all = TRUE) %>%
+    arrange(ststan)
+
+cw_two <- df %>%
+    filter(stabbr != 'IN') %>%
+    mutate(ststan = ifelse(ststan > 12, ststan - 1, ststan)) %>%
+    arrange(ststan)
+
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% FIGURES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{figure}[!ht]
+  % \caption{}
+  \centering
+  \includegraphics[width=\linewidth]{\figdir/{broadband_weights.pdf}}
+  \caption[Broadband weighting scheme]%
+  {\footnotesize An illustrative example of the weighting
+    scheme used to compute broadband measures---download speed, upload
+    speed, number of providers---at an institution. For clarity, only
+    one census block group per county is shown. Raw broadband measures
+    from the National Broadband Map, which are recorded at the census
+    block level, are first aggregated to the census block group level
+    (represented by the dots). The distances between each institution
+    (indicated by the diamond) and all census block group centers are
+    then computed (represented by the dotted lines). The inverse of
+    these distances along with each census block group's population
+    are then used as weights in equation (1), which
+    computes a weighted average of surrounding broadband measures for
+    each institution, with values from nearby and more populated
+    census block groups having comparatively more influence. In this
+    example, weighted broadband measures assigned to Nashville State
+    Community College would be more influenced by those of the census
+    block in Davidson County (nearest black dot to the right) than
+    those of outlying areas both due to its proximity and larger
+    population.}
+  \label{fig:weightex}
+\end{figure}
+
+\begin{figure*}[!ht]
+  \includegraphics[width=\linewidth]{\figdir/{sample_dl_hist.pdf}}
+  \includegraphics[width=\linewidth]{\figdir/{sample_ul_hist.pdf}}
+  \caption[Histogram of download and upload speeds]%
+  {\footnotesize Histograms with overlaying density of
+    distance- and population-weighted download (top) and upload
+    (bottom) speeds assigned to institutions in the analytic
+    sample. The National Broadband Map reports ordinal categories of
+    speed from 1 (< 200 kilobytes/sec) to 11 (> 1
+    gigabytes/sec). Prior to 2015, the Federal Communications
+    Commission (FCC) had set category 5 download speeds ($\approx$
+    4 megabytes/sec) and category 3 upload speeds ($\approx$ 1
+    megabyte/sec) as the minimum thresholds for broadband
+    designation. These points are indicated by the dashed vertical
+    lines. As of 2015, the FCC upgraded the definition of broadband to
+    category 8 for download speeds (at least 25 megabytes/sec) and
+    category 5 for upload speeds. These are indicated by the solid
+    vertical lines.}
+  \label{fig:bbspeedhist}
+\end{figure*}
+
+\begin{figure}[!ht]
+  % \caption{}
+  \centering
+  \includegraphics[width=\linewidth]{\figdir/{sl_dl_ul.pdf}}
+  \caption[Marginal change in enrollment by speed increase:
+  single-level model]%
+  {\footnotesize Computed marginal association between
+    increasing broadband speed tiers and the number of students who
+    take some courses online. Samples were taken from equation (4)
+    shown in Table \ref{tab:sl_normal_full}. Because increases in
+    download speed in the sample are accompanied by increases in
+    upload speed, the margins were computed using scaled values of
+    upload speed determined from the data. The black line represents
+    the average marginal value; the shaded area represents the 95\%
+    credible intervals of the estimated marginal value.}
+  \label{fig:sl_dl_ul}
+\end{figure}
+
+\begin{figure}[!ht]
+  \centering
+  \includegraphics[width=\linewidth]{\figdir/{vi_dl_ul.pdf}}
+  \caption[Marginal change in enrollment by speed increase:
+  varying-intercept model]{\footnotesize Computed marginal association between
+    increasing broadband speed tiers and the number of students who
+    take some courses online. Samples were taken from equation (4)
+    shown in Table \ref{tab:vi_normal_full}. Because increases in
+    download speed in the sample are accompanied by increases in
+    upload speed, the margins were computed using scaled values of
+    upload speed determined from the data. The black line represents
+    the average marginal value; the shaded area represents the 95\%
+    credible intervals of the estimated marginal value.}
+  \label{fig:vi_dl_ul}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% TABLES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% DESCRIPTIVE: SCHOOLS
+
+<<descriptive_schools>>=
+
+## get summary stats
+desc_df <- df %>%
+    select(efdetot, efdesom, twoyr, room, nwhitenrlp, womenenrlp, upgrntpp,
+           pttotp, age25op, year13, year14) %>%
+    summarise_each(funs(mean, sd)) %>%
+    gather(stat, value) %>%
+    separate(stat, into = c('var', 'stat'), sep = '_') %>%
+    mutate(value = if_else(value > 1, round(value), round(value, 2)),
+           ## factor using its currently correct order as factor levels (!)
+           var = factor(var, levels = unique(var))) %>%
+    arrange(var,stat)
+
+## get Ns
+desc_df_n <- df %>%
+    group_by(year) %>%
+    summarise(N = n())
+
+## init out matrix
+out <- matrix(NA_character_, nrow(desc_df) + nrow(desc_df_n), 2)
+
+## add values
+out[,2] <- c(desc_df$value, desc_df_n$N)
+out <- add_parens(out, 2, seq(2,20,2))
+out[,1] <- c('Total enrollment','',
+             'Some online enrollment','',
+             'Two year institution','',
+             'Has on-campus housing','',
+             'Non-white enrollment','',
+             'Women enrollment','',
+             'Pell grant recipients','',
+             'Part-time enrollment','',
+             'Aged 25 years and older','',
+             '2013','',
+             '2014','',
+             '$N$ (2012)',
+             '$N$ (2013)',
+             '$N$ (2014)')
+
+## table notes
+notes <- c('Total enrollment and some online enrollment represent the ' %+%
+           'average number of students rounded to nearest student. ' %+%
+           'Other rows are proportions. Standard deviations are shown in ' %+%
+           'parentheses. Schools included in the sample are public, open ' %+%
+           'admissions postsecondary institutions that report at least one ' %+%
+           'student who took some distance education courses.')
+
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Descriptive statistics of the institution sample}',
+          '\\label{tab:desc_ipeds}',
+          '\\begin{tabularx}{\\linewidth}{Xc}',
+          '\\toprule',
+          '&Mean/(SD) \\\\')
+
+## primary contents
+contents <- print(xtable(out),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  hline.after = c(-1, 0, nrow(out) - 3, nrow(out)),
+                  print.results = FALSE,
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{2}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_desc_ipeds.tex')
+writeLines(c(head, contents, foot))
+
+@
+
+% DESCRIPTIVE: Broadband
+
+<<descriptive_bb>>=
+
+desc_df <- df %>%
+    select(year, starts_with('pdw2_')) %>%
+    group_by(year) %>%
+    summarise_each(funs(mean,sd)) %>%
+    gather(stat, value, -year) %>%
+    separate(stat, into = c('w', 'var', 'stat'), sep = '_') %>%
+    select(-w) %>%
+    mutate(value = round(value, 2),
+           ## factor using its currently correct order as factor levels (!)
+           var = factor(var, levels = unique(var))) %>%
+    arrange(year,var,stat) %>%
+    spread(year, value)
+
+## init out matrix
+out <- matrix(NA_character_, nrow(desc_df), 4)
+
+out[,2:4] <- desc_df %>% select(`2012`, `2013`, `2014`) %>% as.matrix(.)
+out <- add_parens(out,2:4,c(2,4,6))
+out[,1] <- c('Download tier','',
+             'Upload tier','',
+             'Number of providers','')
+
+## table notes
+notes <- c('Values are the average of broadband measures assigned across ' %+%
+           'all schools in the sample in a given year. Each school is ' %+%
+           'given a value that is the population-distance-weighted average ' %+%
+           'of surrounding measures (at the census block level). Download ' %+%
+           'and upload speeds are reported in ordered categorical tiers from ' %+%
+           '2 to 11. Broadband data come from the National Broadband Map. ' %+%
+           'Standard deviations are shown in parentheses.')
+
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Descriptive statistics of broadband measures}',
+          '\\label{tab:desc_bb}',
+          '\\begin{tabularx}{\\linewidth}{Xccc}',
+          '\\toprule',
+          '& 2012 & 2013 & 2014 \\\\')
+
+## primary contents
+contents <- print(xtable(out),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  print.results = FALSE,
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{4}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_desc_bb.tex')
+writeLines(c(head, contents, foot))
+
+@
+
+
+% SINGLE STAGE: FULL SAMPLE
+
+<<sl_full_result>>=
+
+## get list of files
+all_files <- grep('sl_.*_full_.*', list.files(odir), value = TRUE)
+
+## get unique (drop _#)
+all_files <- unique(substr(all_files, 1, nchar(all_files) - 6))
+
+## measure and model names
+measure <- c('download','upload','pcount','all')
+model <- c('normal','beta')
+
+## init out list
+out_list <- list()
+
+for (mod in model) {
+
+    for (meas in measure) {
+
+        ## file name
+        fname <- 'sl' %_% mod %_% 'full_pdw2' %_% meas
+
+        ## grep files from directory
+        files <- grep(fname, list.files(odir), value = TRUE)
+
+        ## read files
+        fit <- read_stan_csv(odir %+% files)
+
+        fit <- tidy(fit, conf.int = TRUE, conf.level = 0.95,
+                    pars = c('alpha','beta')) %>%
+            mutate(a = round(estimate, 3),
+                   lo = round(conf.low, 3),
+                   hi = round(conf.high, 3),
+                   b = '[' %+% lo %+% ',' %+% hi %+% ']',
+                   term = factor(term, term)) %>%
+            select(term, a, b) %>%
+            gather(stat, val, -term) %>%
+            arrange(term, stat)
+
+        ## filter out RUCC
+        if (meas == 'all') {
+
+            fit <- fit %>% filter(!(term %in% c('beta[' %+% 18:25 %+% ']')))
+
+        } else {
+
+            fit <- fit %>% filter(!(term %in% c('beta[' %+% 14:21 %+% ']')))
+        }
+
+        ## add to list
+        out_list[[mod %_% meas]] <- fit
+    }
+}
+
+## make out matrix
+out <- matrix(NA_character_, 36, 9)
+
+## add full columns (all)
+out[,5] <- out_list[['normal_all']][['val']]
+out[,9] <- out_list[['beta_all']][['val']]
+
+## download
+out[c(1:6,15:nrow(out)),2] <- out_list[['normal_download']][['val']]
+out[c(1:6,15:nrow(out)),6] <- out_list[['beta_download']][['val']]
+
+## upload
+out[c(1:2,7:10,15:nrow(out)),3] <- out_list[['normal_upload']][['val']]
+out[c(1:2,7:10,15:nrow(out)),7] <- out_list[['beta_upload']][['val']]
+
+## pcount
+out[c(1:2,11:nrow(out)),4] <- out_list[['normal_pcount']][['val']]
+out[c(1:2,11:nrow(out)),8] <- out_list[['beta_pcount']][['val']]
+
+## move alpha (intercept) rows to bottom
+out <- rbind(out[3:nrow(out),], out[1:2,])
+
+## add Ns
+U <- df %>% summarise(unique = n_distinct(unitid)) %>% .[['unique']]
+N <- nrow(df)
+out <- rbind(out,
+             c('',rep(U,8)),
+             c('',rep(N,8)))
+
+## add rownames
+out[,1] <- c('Download speed','',
+             'Download speed$^2$','',
+             'Upload speed','',
+             'Upload speed$^2$','',
+             '\\# Providers','',
+             '\\# Providers$^2$','',
+             'Two year institution','',
+             'Has on-campus housing','',
+             '$log$(Total enrollment)','',
+             'Prop. non-white','',
+             'Prop. women','',
+             'Prop. Pell grant','',
+             'Prop. part-time','',
+             'Prop. 25 years and older','',
+             '$log$(Pop. density)','',
+             '2013','',
+             '2014','',
+             '(Intercept)','',
+             'Unique institutions',
+             '$N$')
+
+## NORMAL
+
+## table notes
+notes <- c('Bayesian point estimates represent posterior mean values. ' %+%
+           'Values in the square brackets are 95\\% credible intervals. ' %+%
+           'Covariates not reported include indicators for USDA urban/rural ' %+%
+           'community codes. ' %+%
+           'Parameter distributions in each model are the combination of four ' %+%
+           'independent MCMC chains of 1000 draws each (with 1000 initial ' %+%
+           'draws discarded as burn-in) for a total of 4000 draws. ' %+%
+           'All models were estimated using the Stan NUTS sampler with a ' %+%
+           'normal likelihood sampling statement. The ' %+%
+           'outcome measure in all models is the log number of students ' %+%
+           'at each institution who enrolled in some distance education courses.')
+
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Single level Bayesian regressions of log number of ' %+%
+          'students who enrolled ' %+%
+          'in some distance education courses on broadband measures.}',
+          '\\label{tab:sl_normal_full}',
+          '\\begin{tabularx}{\\linewidth}{Xcccc}',
+          '\\toprule',
+          '& (1) & (2) & (3) & (4) \\\\')
+
+## primary contents
+contents <- print(xtable(out[,1:5]),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  print.results = FALSE,
+                  hline.after = c(-1, 0, nrow(out) - 2, nrow(out)),
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{5}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_sl_normal_full.tex')
+writeLines(c(head, contents, foot))
+
+## NORMAL
+
+## table notes
+notes <- c('Bayesian point estimates represent posterior mean values. ' %+%
+           'Values in the square brackets are 95\\% credible intervals. ' %+%
+           'Covariates not reported include indicators for USDA urban/rural ' %+%
+           'community codes. ' %+%
+           'Parameter distributions in each model are the combination of four ' %+%
+           'independent MCMC chains of 1000 draws each (with 1000 initial ' %+%
+           'draws discarded as burn-in) for a total of 4000 draws. ' %+%
+           'All models were estimated using the Stan NUTS sampler with a ' %+%
+           'reparameterized beta likelihood sampling statement. The ' %+%
+           'outcome measure in all models is the percentage of students ' %+%
+           'at each institution who enrolled in some distance education courses.')
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Single level Bayesian beta regressions of percentage ' %+%
+          'of students who enrolled ' %+%
+          'in some distance education courses on broadband measures.}',
+          '\\label{tab:sl_beta_full}',
+          '\\begin{tabularx}{\\linewidth}{Xcccc}',
+          '\\toprule',
+          '& (1) & (2) & (3) & (4) \\\\')
+
+## primary contents
+contents <- print(xtable(out[,c(1,6:9)]),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  print.results = FALSE,
+                  hline.after = c(-1, 0, nrow(out) - 2, nrow(out)),
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{5}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_sl_beta_full.tex')
+writeLines(c(head, contents, foot))
+
+@
+
+
+% VARYING INTERCEPT: FULL
+
+<<vi_full_result>>=
+
+## get list of files
+all_files <- grep('vi_.*_full_.*', list.files(odir), value = TRUE)
+
+## get unique (drop _#)
+all_files <- unique(substr(all_files, 1, nchar(all_files) - 6))
+
+## measure and model names
+measure <- c('download','upload','pcount','all')
+model <- c('normal','beta')
+
+## init out list
+out_list <- list()
+
+for (mod in model) {
+
+    for (meas in measure) {
+
+        ## file name
+        fname <- 'vi' %_% mod %_% 'full_pdw2' %_% meas
+
+        ## grep files from directory
+        files <- grep(fname, list.files(odir), value = TRUE)
+
+        ## read files
+        fit <- read_stan_csv(odir %+% files)
+
+        ## broom it!
+        fit <- tidy(fit, conf.int = TRUE, conf.level = 0.95,
+                    pars = c('beta')) %>%
+            mutate(a = round(estimate, 3),
+                   lo = round(conf.low, 3),
+                   hi = round(conf.high, 3),
+                   b = '[' %+% lo %+% ',' %+% hi %+% ']',
+                   term = factor(term, term)) %>%
+            select(term, a, b) %>%
+            gather(stat, val, -term) %>%
+            arrange(term, stat)
+
+        ## filter out RUCC
+        if (meas == 'all') {
+
+            fit <- fit %>% filter(!(term %in% c('beta[' %+% 18:25 %+% ']')))
+
+        } else {
+
+            fit <- fit %>% filter(!(term %in% c('beta[' %+% 14:21 %+% ']')))
+        }
+
+        ## add to list
+        out_list[[mod %_% meas]] <- fit
+    }
+}
+
+## make out matrix
+out <- matrix(NA_character_, 34, 9)
+
+## add full columns (all)
+out[,5] <- out_list[['normal_all']][['val']]
+out[,9] <- out_list[['beta_all']][['val']]
+
+## download
+out[c(1:4,13:nrow(out)),2] <- out_list[['normal_download']][['val']]
+out[c(1:4,13:nrow(out)),6] <- out_list[['beta_download']][['val']]
+
+## upload
+out[c(5:8,13:nrow(out)),3] <- out_list[['normal_upload']][['val']]
+out[c(5:8,13:nrow(out)),7] <- out_list[['beta_upload']][['val']]
+
+## pcount
+out[c(9:nrow(out)),4] <- out_list[['normal_pcount']][['val']]
+out[c(9:nrow(out)),8] <- out_list[['beta_pcount']][['val']]
+
+## add Ns
+U <- df %>% summarise(unique = n_distinct(unitid)) %>% .[['unique']]
+N <- df %>% summarise(count = n()) %>% .[['count']]
+out <- rbind(out,
+             c('',rep(U,8)),
+             c('',rep(N,8)))
+
+## add rownames
+out[,1] <- c('Download speed','',
+             'Download speed$^2$','',
+             'Upload speed','',
+             'Upload speed$^2$','',
+             '\\# Providers','',
+             '\\# Providers$^2$','',
+             'Two year institution','',
+             'Has on-campus housing','',
+             '$log$(Total enrollment)','',
+             'Prop. non-white','',
+             'Prop. women','',
+             'Prop. Pell grant','',
+             'Prop. part-time','',
+             'Prop. 25 years and older','',
+             '$log$(Pop. density)','',
+             '2013','',
+             '2014','',
+             'Unique institutions',
+             '$N$')
+
+## NORMAL
+
+## table notes
+notes <- c('Bayesian point estimates represent posterior mean values. ' %+%
+           'Values in the square brackets are 95\\% credible intervals. ' %+%
+           'Intercepts (not reported) were allowed to vary at the state level. ' %+%
+           'First level ' %+%
+           'covariates not reported are indicators for USDA urban/rural ' %+%
+           'community codes. Second level covariates include state unemployment ' %+%
+           'rate, statewide average appropriations per FTE student, the ' %+%
+           'proportion of public open admissions institutions in the state ' %+%
+           'that are two-year institutions, and a population-weighted ' %+%
+           'measure of the average distance to the nearest open admissions ' %+%
+           'institution in the state. ' %+%
+           'Parameter distributions in each model are the combination of four ' %+%
+           'independent MCMC chains of 1000 draws each (with 1000 initial ' %+%
+           'draws discarded as burn-in) for a total of 4000 draws. ' %+%
+           'All models were estimated using the Stan NUTS sampler with a ' %+%
+           'normal likelihood sampling statement. The ' %+%
+           'outcome measure in all models is the log number of students ' %+%
+           'at each institution who enrolled in some distance education courses.')
+
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Varying intercept Bayesian regressions of log number of ' %+%
+          'students who enrolled ' %+%
+          'in some distance education courses on broadband measures}',
+          '\\label{tab:vi_normal_full}',
+          '\\begin{tabularx}{\\linewidth}{Xcccc}',
+          '\\toprule',
+          '& (1) & (2) & (3) & (4) \\\\')
+
+## primary contents
+contents <- print(xtable(out[,1:5]),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  print.results = FALSE,
+                  hline.after = c(-1, 0, nrow(out) - 2, nrow(out)),
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{5}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_vi_normal_full.tex')
+writeLines(c(head, contents, foot))
+
+## BETA
+
+## table notes
+notes <- c('Bayesian point estimates represent posterior mean values. ' %+%
+           'Values in the square brackets are 95\\% credible intervals. ' %+%
+           'Intercepts (not reported) were allowed to vary at the state level. ' %+%
+           'First level ' %+%
+           'covariates not reported are indicators for USDA urban/rural ' %+%
+           'community codes. Second level covariates include state unemployment ' %+%
+           'rate, statewide average appropriations per FTE student, the ' %+%
+           'proportion of public open admissions institutions in the state ' %+%
+           'that are two-year institutions, and a population-weighted ' %+%
+           'measure of the average distance to the nearest open admissions ' %+%
+           'institution in the state. ' %+%
+           'Parameter distributions in each model are the combination of four ' %+%
+           'independent MCMC chains of 1000 draws each (with 1000 initial ' %+%
+           'draws discarded as burn-in) for a total of 4000 draws. ' %+%
+           'All models were estimated using the Stan NUTS sampler with a ' %+%
+           'reparameterized beta likelihood sampling statement. The ' %+%
+           'outcome measure in all models is the percentage of students ' %+%
+           'at each institution who enrolled in some distance education courses.')
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Varying intercept Bayesian beta regressions of percentage ' %+%
+          'of students who enrolled ' %+%
+          'in some distance education courses on broadband measures}',
+          '\\label{tab:vi_beta_full}',
+          '\\begin{tabularx}{\\linewidth}{Xcccc}',
+          '\\toprule',
+          '& (1) & (2) & (3) & (4) \\\\')
+
+## primary contents
+contents <- print(xtable(out[,c(1,6:9)]),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  print.results = FALSE,
+                  hline.after = c(-1, 0, nrow(out) - 2, nrow(out)),
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{5}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_vi_beta_full.tex')
+writeLines(c(head, contents, foot))
+
+@
+
+%% @
+
+%% =============================================================================
+%% APPENDIX
+%% =============================================================================
+
+<<get_data_sens>>=
+
+df <- read_csv(ddir %+% 'analysis_all.csv') %>% filter(unitid != 150987)
+
+## get ststan/st crosswalk
+cw_full <- df %>%
+    select(stfips, stabbr, stname, ststan) %>%
+    distinct(stfips, .keep_all = TRUE) %>%
+    arrange(ststan)
+
+cw_two <- df %>%
+    filter(stabbr != 'IN') %>%
+    mutate(ststan = ifelse(ststan > 12, ststan - 1, ststan)) %>%
+    arrange(ststan)
+
+@
+
+% DESCRIPTIVE: SCHOOLS
+
+<<descriptive_schools_sen>>=
+
+## get summary stats
+desc_df <- df %>%
+    select(efdetot, efdesom, twoyr, room, privnp, privfp, openadmp,
+           nwhitenrlp, womenenrlp, upgrntpp,
+           pttotp, age25op, year13, year14) %>%
+    summarise_each(funs(mean, sd)) %>%
+    gather(stat, value) %>%
+    separate(stat, into = c('var', 'stat'), sep = '_') %>%
+    mutate(value = if_else(value > 1, round(value), round(value, 2)),
+           ## factor using its currently correct order as factor levels (!)
+           var = factor(var, levels = unique(var))) %>%
+    arrange(var,stat)
+
+## get Ns
+desc_df_n <- df %>%
+    group_by(year) %>%
+    summarise(N = n())
+
+## init out matrix
+out <- matrix(NA_character_, nrow(desc_df) + nrow(desc_df_n), 2)
+
+## add values
+out[,2] <- c(desc_df$value, desc_df_n$N)
+out <- add_parens(out, 2, seq(2,20,2))
+out[,1] <- c('Total enrollment','',
+             'Some online enrollment','',
+             'Two year institution','',
+             'Has on-campus housing','',
+             'Private, nonprofit','',
+             'Private, for-profit','',
+             'Open admissions policy','',
+             'Non-white enrollment','',
+             'Women enrollment','',
+             'Pell grant recipients','',
+             'Part-time enrollment','',
+             'Aged 25 years and older','',
+             '2013','',
+             '2014','',
+             '$N$ (2012)',
+             '$N$ (2013)',
+             '$N$ (2014)')
+
+## table notes
+notes <- c('Total enrollment and some online enrollment represent the ' %+%
+           'average number of students rounded to nearest student. ' %+%
+           'Other rows are proportions. Standard deviations are shown in ' %+%
+           'parentheses. Schools included in the sample are public, open ' %+%
+           'admissions postsecondary institutions that report at least one ' %+%
+           'student who took some distance education courses.')
+
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Descriptive statistics of the institution sample using ' %+%
+          'all institutions}',
+          '\\label{tab:desc_ipeds_sens}',
+          '\\begin{tabularx}{\\linewidth}{Xc}',
+          '\\toprule',
+          '&Mean/(SD) \\\\')
+
+## primary contents
+contents <- print(xtable(out),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  hline.after = c(-1, 0, nrow(out) - 3, nrow(out)),
+                  print.results = FALSE,
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{2}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_desc_ipeds_sens.tex')
+writeLines(c(head, contents, foot))
+
+@
+
+% DESCRIPTIVE: Broadband
+
+<<descriptive_bb_sens>>=
+
+desc_df <- df %>%
+    select(year, starts_with('pdw2_')) %>%
+    group_by(year) %>%
+    summarise_each(funs(mean,sd)) %>%
+    gather(stat, value, -year) %>%
+    separate(stat, into = c('w', 'var', 'stat'), sep = '_') %>%
+    select(-w) %>%
+    mutate(value = round(value, 2),
+           ## factor using its currently correct order as factor levels (!)
+           var = factor(var, levels = unique(var))) %>%
+    arrange(year,var,stat) %>%
+    spread(year, value)
+
+## init out matrix
+out <- matrix(NA_character_, nrow(desc_df), 4)
+
+out[,2:4] <- desc_df %>% select(`2012`, `2013`, `2014`) %>% as.matrix(.)
+out <- add_parens(out,2:4,c(2,4,6))
+out[,1] <- c('Download tier','',
+             'Upload tier','',
+             'Number of providers','')
+
+## table notes
+notes <- c('Values are the average of broadband measures assigned across ' %+%
+           'all schools in the sample in a given year. Each school is ' %+%
+           'given a value that is the population-distance-weighted average ' %+%
+           'of surrounding measures (at the census block level). Download ' %+%
+           'and upload speeds are reported in ordered categorical tiers from ' %+%
+           '2 to 11. Broadband data come from the National Broadband Map. ' %+%
+           'Standard deviations are shown in parentheses.')
+
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Descriptive statistics of broadband measures using ' %+%
+          'all institutions}',
+          '\\label{tab:desc_bb_sens}',
+          '\\begin{tabularx}{\\linewidth}{Xccc}',
+          '\\toprule',
+          '& 2012 & 2013 & 2014 \\\\')
+
+## primary contents
+contents <- print(xtable(out),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  print.results = FALSE,
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{4}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_desc_bb_sens.tex')
+writeLines(c(head, contents, foot))
+
+@
+
+
+
+% SINGLE STAGE: SENS SAMPLE
+
+<<sl_sens_result>>=
+
+df <- read_csv(ddir %+% 'analysis_all.csv') %>% filter(unitid != 150987)
+
+## get list of files
+all_files <- grep('sl_.*_sens_.*', list.files(odir), value = TRUE)
+
+## get unique (drop _#)
+all_files <- unique(substr(all_files, 1, nchar(all_files) - 6))
+
+## measure and model names
+measure <- c('download','upload','pcount','all')
+model <- c('normal','beta')
+
+## init out list
+out_list <- list()
+
+for (mod in model) {
+
+    for (meas in measure) {
+
+        ## file name
+        fname <- 'sl' %_% mod %_% 'sens_pdw2' %_% meas
+
+        ## grep files from directory
+        files <- grep(fname, list.files(odir), value = TRUE)
+
+        ## read files
+        fit <- read_stan_csv(odir %+% files)
+
+        fit <- tidy(fit, conf.int = TRUE, conf.level = 0.95,
+                    pars = c('alpha','beta')) %>%
+            mutate(a = round(estimate, 3),
+                   lo = round(conf.low, 3),
+                   hi = round(conf.high, 3),
+                   b = '[' %+% lo %+% ',' %+% hi %+% ']',
+                   term = factor(term, term)) %>%
+            select(term, a, b) %>%
+            gather(stat, val, -term) %>%
+            arrange(term, stat)
+
+        ## filter out RUCC
+        if (meas == 'all') {
+
+            fit <- fit %>% filter(!(term %in% c('beta[' %+% 21:28 %+% ']')))
+
+        } else {
+
+            fit <- fit %>% filter(!(term %in% c('beta[' %+% 17:24 %+% ']')))
+        }
+
+        ## add to list
+        out_list[[mod %_% meas]] <- fit
+    }
+}
+
+## make out matrix
+out <- matrix(NA_character_, 42, 9)
+
+## add full columns (all)
+out[,5] <- out_list[['normal_all']][['val']]
+out[,9] <- out_list[['beta_all']][['val']]
+
+## download
+out[c(1:6,15:nrow(out)),2] <- out_list[['normal_download']][['val']]
+out[c(1:6,15:nrow(out)),6] <- out_list[['beta_download']][['val']]
+
+## upload
+out[c(1:2,7:10,15:nrow(out)),3] <- out_list[['normal_upload']][['val']]
+out[c(1:2,7:10,15:nrow(out)),7] <- out_list[['beta_upload']][['val']]
+
+## pcount
+out[c(1:2,11:nrow(out)),4] <- out_list[['normal_pcount']][['val']]
+out[c(1:2,11:nrow(out)),8] <- out_list[['beta_pcount']][['val']]
+
+## move alpha (intercept) rows to bottom
+out <- rbind(out[3:nrow(out),], out[1:2,])
+
+## add Ns
+U <- df %>% summarise(unique = n_distinct(unitid)) %>% .[['unique']]
+N <- nrow(df)
+out <- rbind(out,
+             c('',rep(U,8)),
+             c('',rep(N,8)))
+
+## add rownames
+out[,1] <- c('Download speed','',
+             'Download speed$^2$','',
+             'Upload speed','',
+             'Upload speed$^2$','',
+             '\\# Providers','',
+             '\\# Providers$^2$','',
+             'Two year institution','',
+             'Has on-campus housing','',
+             'Private, nonprofit','',
+             'Private, for-profit','',
+             'Open admissions policy','',
+             '$log$(Total enrollment)','',
+             'Prop. non-white','',
+             'Prop. women','',
+             'Prop. Pell grant','',
+             'Prop. part-time','',
+             'Prop. 25 years and older','',
+             '$log$(Pop. density)','',
+             '2013','',
+             '2014','',
+             '(Intercept)','',
+             'Unique institutions',
+             '$N$')
+
+## NORMAL
+
+## table notes
+notes <- c('Bayesian point estimates represent posterior mean values. ' %+%
+           'Values in the square brackets are 95\\% credible intervals. ' %+%
+           'Covariates not reported include indicators for USDA urban/rural ' %+%
+           'community codes. ' %+%
+           'Parameter distributions in each model are the combination of four ' %+%
+           'independent MCMC chains of 1000 draws each (with 1000 initial ' %+%
+           'draws discarded as burn-in) for a total of 4000 draws. ' %+%
+           'All models were estimated using the Stan NUTS sampler with a ' %+%
+           'normal likelihood sampling statement. The ' %+%
+           'outcome measure in all models is the log number of students ' %+%
+           'at each institution who enrolled in some distance education courses.')
+
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Single level Bayesian regressions of log number of ' %+%
+          'students who enrolled ' %+%
+          'in some distance education courses on broadband measures using all ' %+%
+          'institutions}',
+          '\\label{tab:sl_normal_sens}',
+          '\\begin{tabularx}{\\linewidth}{Xcccc}',
+          '\\toprule',
+          '& (1) & (2) & (3) & (4) \\\\')
+
+## primary contents
+contents <- print(xtable(out[,1:5]),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  print.results = FALSE,
+                  hline.after = c(-1, 0, nrow(out) - 2, nrow(out)),
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{5}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_sl_normal_sens.tex')
+writeLines(c(head, contents, foot))
+
+## NORMAL
+
+## table notes
+notes <- c('Bayesian point estimates represent posterior mean values. ' %+%
+           'Values in the square brackets are 95\\% credible intervals. ' %+%
+           'Covariates not reported include indicators for USDA urban/rural ' %+%
+           'community codes. ' %+%
+           'Parameter distributions in each model are the combination of four ' %+%
+           'independent MCMC chains of 1000 draws each (with 1000 initial ' %+%
+           'draws discarded as burn-in) for a total of 4000 draws. ' %+%
+           'All models were estimated using the Stan NUTS sampler with a ' %+%
+           'reparameterized beta likelihood sampling statement. The ' %+%
+           'outcome measure in all models is the percentage of students ' %+%
+           'at each institution who enrolled in some distance education courses.')
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Single level Bayesian beta regressions of percentage ' %+%
+          'of students who enrolled ' %+%
+          'in some distance education courses on broadband measures using all ' %+%
+          'institutions}',
+          '\\label{tab:sl_beta_sens}',
+          '\\begin{tabularx}{\\linewidth}{Xcccc}',
+          '\\toprule',
+          '& (1) & (2) & (3) & (4) \\\\')
+
+## primary contents
+contents <- print(xtable(out[,c(1,6:9)]),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  print.results = FALSE,
+                  hline.after = c(-1, 0, nrow(out) - 2, nrow(out)),
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{5}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_sl_beta_sens.tex')
+writeLines(c(head, contents, foot))
+
+
+@
+
+% VARYING INTERCEPT: SENSITIVITY
+
+<<vi_sens_result>>=
+
+df <- read_csv(ddir %+% 'analysis_all.csv') %>% filter(unitid != 150987)
+
+## get list of files
+all_files <- grep('vi_.*_sens_.*', list.files(odir), value = TRUE)
+
+## get unique (drop _#)
+all_files <- unique(substr(all_files, 1, nchar(all_files) - 6))
+
+## measure and model names
+measure <- c('download','upload','pcount','all')
+model <- c('normal','beta')
+
+## init out list
+out_list <- list()
+
+for (mod in model) {
+
+    for (meas in measure) {
+
+        ## file name
+        fname <- 'vi' %_% mod %_% 'sens_pdw2' %_% meas
+
+        ## grep files from directory
+        files <- grep(fname, list.files(odir), value = TRUE)
+
+        ## read files
+        fit <- read_stan_csv(odir %+% files)
+
+        ## broom it!
+        fit <- tidy(fit, conf.int = TRUE, conf.level = 0.95,
+                    pars = c('beta')) %>%
+            mutate(a = round(estimate, 3),
+                   lo = round(conf.low, 3),
+                   hi = round(conf.high, 3),
+                   b = '[' %+% lo %+% ',' %+% hi %+% ']',
+                   term = factor(term, term)) %>%
+            select(term, a, b) %>%
+            gather(stat, val, -term) %>%
+            arrange(term, stat)
+
+        ## filter out RUCC
+        if (meas == 'all') {
+
+            fit <- fit %>% filter(!(term %in% c('beta[' %+% 21:28 %+% ']')))
+
+        } else {
+
+            fit <- fit %>% filter(!(term %in% c('beta[' %+% 17:24 %+% ']')))
+        }
+
+        ## add to list
+        out_list[[mod %_% meas]] <- fit
+    }
+}
+
+## make out matrix
+out <- matrix(NA_character_, 40, 9)
+
+## add full columns (all)
+out[,5] <- out_list[['normal_all']][['val']]
+out[,9] <- out_list[['beta_all']][['val']]
+
+## download
+out[c(1:4,13:nrow(out)),2] <- out_list[['normal_download']][['val']]
+out[c(1:4,13:nrow(out)),6] <- out_list[['beta_download']][['val']]
+
+## upload
+out[c(5:8,13:nrow(out)),3] <- out_list[['normal_upload']][['val']]
+out[c(5:8,13:nrow(out)),7] <- out_list[['beta_upload']][['val']]
+
+## pcount
+out[c(9:nrow(out)),4] <- out_list[['normal_pcount']][['val']]
+out[c(9:nrow(out)),8] <- out_list[['beta_pcount']][['val']]
+
+## add Ns
+U <- df %>% summarise(unique = n_distinct(unitid)) %>% .[['unique']]
+N <- df %>% summarise(count = n()) %>% .[['count']]
+out <- rbind(out,
+             c('',rep(U,8)),
+             c('',rep(N,8)))
+
+## add rownames
+out[,1] <- c('Download speed','',
+             'Download speed$^2$','',
+             'Upload speed','',
+             'Upload speed$^2$','',
+             '\\# Providers','',
+             '\\# Providers$^2$','',
+             'Two year institution','',
+             'Has on-campus housing','',
+             'Private, nonprofit','',
+             'Private, for-profit','',
+             'Open admissions policy','',
+             '$log$(Total enrollment)','',
+             'Prop. non-white','',
+             'Prop. women','',
+             'Prop. Pell grant','',
+             'Prop. part-time','',
+             'Prop. 25 years and older','',
+             '$log$(Pop. density)','',
+             '2013','',
+             '2014','',
+             'Unique institutions',
+             '$N$')
+
+## NORMAL
+
+## table notes
+notes <- c('Bayesian point estimates represent posterior mean values. ' %+%
+           'Values in the square brackets are 95\\% credible intervals. ' %+%
+           'Intercepts (not reported) were allowed to vary at the state level. ' %+%
+           'First level ' %+%
+           'covariates not reported are indicators for USDA urban/rural ' %+%
+           'community codes. Second level covariates include state unemployment ' %+%
+           'rate, statewide average appropriations per FTE student, the ' %+%
+           'proportion of public open admissions institutions in the state ' %+%
+           'that are two-year institutions, and a population-weighted ' %+%
+           'measure of the average distance to the nearest open admissions ' %+%
+           'institution in the state. ' %+%
+           'Parameter distributions in each model are the combination of four ' %+%
+           'independent MCMC chains of 1000 draws each (with 1000 initial ' %+%
+           'draws discarded as burn-in) for a total of 4000 draws. ' %+%
+           'All models were estimated using the Stan NUTS sampler with a ' %+%
+           'normal likelihood sampling statement. The ' %+%
+           'outcome measure in all models is the log number of students ' %+%
+           'at each institution who enrolled in some distance education courses.')
+
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Varying intercept Bayesian regressions of log number of ' %+%
+          'students who enrolled ' %+%
+          'in some distance education courses on broadband measures using all ' %+%
+          'institutions}',
+          '\\label{tab:vi_normal_full}',
+          '\\begin{tabularx}{\\linewidth}{Xcccc}',
+          '\\toprule',
+          '& (1) & (2) & (3) & (4) \\\\')
+
+## primary contents
+contents <- print(xtable(out[,1:5]),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  print.results = FALSE,
+                  hline.after = c(-1, 0, nrow(out) - 2, nrow(out)),
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{5}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_vi_normal_sens.tex')
+writeLines(c(head, contents, foot))
+
+## BETA
+
+## table notes
+notes <- c('Bayesian point estimates represent posterior mean values. ' %+%
+           'Values in the square brackets are 95\\% credible intervals. ' %+%
+           'Intercepts (not reported) were allowed to vary at the state level. ' %+%
+           'First level ' %+%
+           'covariates not reported are indicators for USDA urban/rural ' %+%
+           'community codes. Second level covariates include state unemployment ' %+%
+           'rate, statewide average appropriations per FTE student, the ' %+%
+           'proportion of public open admissions institutions in the state ' %+%
+           'that are two-year institutions, and a population-weighted ' %+%
+           'measure of the average distance to the nearest open admissions ' %+%
+           'institution in the state. ' %+%
+           'Parameter distributions in each model are the combination of four ' %+%
+           'independent MCMC chains of 1000 draws each (with 1000 initial ' %+%
+           'draws discarded as burn-in) for a total of 4000 draws. ' %+%
+           'All models were estimated using the Stan NUTS sampler with a ' %+%
+           'reparameterized beta likelihood sampling statement. The ' %+%
+           'outcome measure in all models is the percentage of students ' %+%
+           'at each institution who enrolled in some distance education courses.')
+## header
+head <- c('\\begin{table}[!ht]',
+          '\\centering',
+          '\\caption{Varying intercept Bayesian beta regressions of percentage ' %+%
+          'of students who enrolled ' %+%
+          'in some distance education courses on broadband measures using all ' %+%
+          'institutions}',
+          '\\label{tab:vi_beta_full}',
+          '\\begin{tabularx}{\\linewidth}{Xcccc}',
+          '\\toprule',
+          '& (1) & (2) & (3) & (4) \\\\')
+
+## primary contents
+contents <- print(xtable(out[,c(1,6:9)]),
+                  booktabs = TRUE,
+                  sanitize.text.function = function(x){x},
+                  include.colnames = FALSE,
+                  include.rownames = FALSE,
+                  only.contents = TRUE,
+                  print.results = FALSE,
+                  hline.after = c(-1, 0, nrow(out) - 2, nrow(out)),
+                  comment = FALSE)
+
+## footer
+foot <- c('\\multicolumn{5}{p{.98\\linewidth}}',
+          '{\\footnotesize{\\itshape Notes.} ',
+          notes,
+          '}',
+          '\\end{tabularx}',
+          '\\end{table}')
+
+writeLines(c(head, contents, foot), con = tdir %+% 'paper_vi_beta_sens.tex')
+writeLines(c(head, contents, foot))
+
+@
+
+
+
+\end{document}
