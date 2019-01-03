@@ -118,7 +118,7 @@ rpkgs:
 # --- Data ---------------------------------------
 
 # get data
-get-data: $(IPEDS_DATA) 
+get-data: 
 	@echo "Downloading raw data files"
 	Rscript $(R_DIR)/get_data.R $(R_DIR) $(DATA_DIR)
 

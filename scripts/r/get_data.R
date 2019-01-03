@@ -87,9 +87,10 @@ url <- 'https://www.ers.usda.gov/webdocs/DataFiles/53251/' %+% file
 check_get(file, gdir, url)
 
 ## land area
-file <- 'LND01.xls'
-url <- 'http://www2.census.gov/prod2/statcomp/usac/excel/' %+% file
+file <- 'LND.zip'
+url <- 'http://www2.census.gov/prod2/statcomp/usac/zip/' %+% file
 check_get(file, gdir, url)
+unzip(file.path(gdir, 'LND.zip'), exdir = gdir)
 
 ## -----------------
 ## ./ipeds
