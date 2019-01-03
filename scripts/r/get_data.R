@@ -37,7 +37,7 @@ for (d in dirs) { dir.create(d, showWarnings = FALSE, recursive = TRUE) }
 
 ## population
 file <- 'co-est2015-alldata.csv'
-url <- 'https://www2.census.gov/programs-surveys/popest/datasets/' %+%
+url <- 'http://www2.census.gov/programs-surveys/popest/datasets/' %+%
     '2010-2015/counties/totals/' %+% file
 check_get(file, adir, url)
 
@@ -51,7 +51,7 @@ years <- 2012:2014
 for (yr in years) {
     file <- 'All-NBM-CSV-June-' %+% yr %+% '.zip'
     url <- nbm_base_url %+% file
-    check_get(file, bdir, url)
+    check_get(file, bdir, url, mode = 'wb')
 }
 
 ## -----------------
@@ -84,12 +84,12 @@ check_get(file, gdir, url)
 ## RUCC
 file <- 'ruralurbancodes2013.xls'
 url <- 'https://www.ers.usda.gov/webdocs/DataFiles/53251/' %+% file
-check_get(file, gdir, url)
+check_get(file, gdir, url, mode = 'wb')
 
 ## land area
 file <- 'LND.zip'
 url <- 'http://www2.census.gov/prod2/statcomp/usac/zip/' %+% file
-check_get(file, gdir, url)
+check_get(file, gdir, url, mode = 'wb')
 unzip(file.path(gdir, 'LND.zip'), exdir = gdir)
 
 ## -----------------
@@ -104,8 +104,8 @@ source(file.path(args[1], 'download_ipeds.R'))
 ## -----------------
 
 file <- 'State_by_State_Wave_Charts_FY15_0.xlsx'
-url <- 'www.sheeo.org/sites/default/files/' %+% file
-check_get(file, sdir, url)
+url <- 'http://www.sheeo.org/sites/default/files/' %+% file
+check_get(file, sdir, url, mode = 'wb')
 
 ## -----------------------------------------------------------------------------
 ## END SCRIPT

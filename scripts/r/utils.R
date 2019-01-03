@@ -31,9 +31,11 @@ propmiss <- function(dataframe) {
 }
 
 ## check if file exists and then download if not
-check_get <- function(file, path, url) {
+check_get <- function(file, path, url, mode = 'w') {
     if (!file.exists(file.path(path, file))) {
-        download.file(url = url, destfile = file.path(path, file))
+        download.file(url = url,
+                      destfile = file.path(path, file),
+                      mode = mode)
     } else {
         message(file.path(path, file) %+% ' already exists!')
     }

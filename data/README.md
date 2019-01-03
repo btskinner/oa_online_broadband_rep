@@ -46,7 +46,9 @@ The remaining files come from various US government sites:
 
 1. [Block group population centers](http://www2.census.gov/geo/docs/reference/cenpop2010/blkgrp/CenPop2010_Mean_BG.txt)  
 2. [Rural-Urban Continuum Codes](https://www.ers.usda.gov/webdocs/DataFiles/53251/ruralurbancodes2013.xls)  
-3. [Land area](http://www2.census.gov/prod2/statcomp/usac/excel/LND01.xls)  
+3. [Land area](http://www2.census.gov/prod2/statcomp/usac/zip/LND.zip)  
+
+**NB** You need to unzip `LND.zip` to get `LND01.xls`.
 
 ## IPEDS
 

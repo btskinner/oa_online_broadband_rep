@@ -236,7 +236,7 @@ clean:
 	@mkdir -p $(STAN_DIR)
 	@mv $(SCRIPT_DIR)/tmp/* $(STAN_DIR)
 	$(RM) -r $(SCRIPT_DIR)/tmp
-	$(RM) $(TABLE_DIR)/*.tex $(TABLE_DIR)/tex
+	$(RM) -r $(TABLE_DIR)/*.tex $(TABLE_DIR)/tex
 	$(RM) $(FIGURE_DIR)/*.pdf
 	$(RM) table_figures.*
 
