@@ -11,12 +11,12 @@
 args <- commandArgs(trailingOnly = TRUE)
 
 ## read in utility functions
-source(paste0(args[1],'/utils.R'))
+source(file.path(args[1], '/utils.R'))
 
 ## directories
 ddir <- args[2]
 adir <- file.path(ddir, 'acs')
-bdir <- file.path(ddir, 'broadband')
+bdir <- file.path(ddir, 'broadband', 'zip')
 cdir <- file.path(ddir, 'cleaned')
 idir <- file.path(ddir, 'ipeds')
 gdir <- file.path(ddir, 'geo')
@@ -26,24 +26,12 @@ sdir <- file.path(ddir, 'sheeo')
 ## create subdirs
 ## -----------------
 
-dirs <- c(adir, bdir, cdir, idir, gdir, sdir)
-for (d in dirs) { dir.create(d, showWarnings = FALSE) }
+dirs <- c(bdir, cdir, idir, gdir, sdir) # adir already exists
+for (d in dirs) { dir.create(d, showWarnings = FALSE, recursive = TRUE) }
 
 ## -----------------
 ## ./acs
 ## -----------------
-
-## employment data: state
-file <- 'ACS_14_5YR_S2301_state.csv'
-url <- 'https://factfinder.census.gov/bkmk/table/1.0/en/ACS/14_5YR/' %+%
-    'S2301/0100000US.04000'
-check_get(file, adir, url)
-
-## employment data: county
-file <- 'ACS_14_5YR_S2301_county.csv'
-url <- 'https://factfinder.census.gov/bkmk/table/1.0/en/ACS/14_5YR/' %+%
-    'S2301/0100000US.05000.003'
-check_get(file, adir, url)
 
 ## population
 file <- 'co-est2015-alldata.csv'
@@ -61,7 +49,7 @@ years <- 2012:2014
 for (yr in years) {
     file <- 'All-NBM-CSV-June-' %+% yr %+% '.zip'
     url <- nbm_base_url %+% file
-    check_get(file, file.path(bdir, 'zip'), url)
+    check_get(file, bdir, url)
 }
 
 ## -----------------
@@ -70,6 +58,11 @@ for (yr in years) {
 
 ## spatial data url
 git_geo <- 'https://raw.githubusercontent.com/btskinner/spatial/master/data/'
+
+## stcrossalk
+file <- 'stcrosswalk.csv'
+url <- git_geo %+% file
+check_get(file, gdir, url)
 
 ## county centers
 file <- 'county_centers.csv'
@@ -100,7 +93,8 @@ check_get(file, gdir, url)
 ## ./ipeds
 ## -----------------
 
-source('./downloadipeds.R')
+ipeds_dir <- idir
+source(file.path(args[1], 'download_ipeds.R'))
 
 ## -----------------
 ## ./sheeo
