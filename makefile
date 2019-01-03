@@ -108,9 +108,6 @@ $(STAN_DIR)/%: $(STAN_DIR)/%.stan
 	@echo "Compiling Stan scripts"
 	(cd $(CMDSTAN_DIR) && make $(PWD)/$(basename $<))
 
-# store stan file extra
-STAN_FILE_EXT := $(filter-out $(STAN_DIR)/*.stan, $(STAN_DIR)/*)
-
 # --- R packages ---------------------------------
 
 # get R packages
