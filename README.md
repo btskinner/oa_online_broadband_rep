@@ -2,8 +2,8 @@ This repository contains the replication files for
 
 > Skinner, B.T. (2019). [Making the connection: Broadband access and
 > online course enrollment at public open admissions
-> institutions](https://link.springer.com/article/10.1007/s11162-018-9539-6). Research
-> in Higher Education, 1-40.  
+> institutions](https://link.springer.com/article/10.1007/s11162-018-9539-6). _Research
+> in Higher Education_, 60(7), 960–999.  
 
 # Requirements
 
